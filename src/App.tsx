@@ -601,21 +601,19 @@ export default function App() {
         {screen === 'chat' && (
           <div style={{
             position: 'fixed',
-            bottom: 0,
-            left: isMobile ? 0 : 240, // Account for sidebar
-            right: 0,
-            background: tokens.colors.paper,
-            padding: '16px 20px',
-            borderTop: `1px solid ${tokens.colors.paperDark}`,
+            bottom: 24,
+            left: isMobile ? 20 : 280,
+            right: 20,
+            maxWidth: 560,
             zIndex: 50
           }}>
-            <div style={{ maxWidth: 600, margin: '0 auto' }}>
-              <DashedBox style={{
-                background: tokens.colors.white,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12
-              }}>
+            <DashedBox style={{
+              background: tokens.colors.white,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
+            }}>
                 <input
                   type="text"
                   value={message}
@@ -653,8 +651,7 @@ export default function App() {
                 >
                   {isLoading ? 'Penso...' : 'Invia'} <span style={{ fontSize: 14 }}>✨</span>
                 </button>
-              </DashedBox>
-            </div>
+            </DashedBox>
           </div>
         )}
 

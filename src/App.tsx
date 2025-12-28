@@ -11,6 +11,20 @@ import {
   SketchHeart
 } from './components/ui/ZineUI';
 import {
+  UserMessage,
+  AIMessage,
+  LoadingDots,
+  DashedBox,
+  QuickReply,
+  QuickReplies,
+  RecipeInChat,
+  ConversationListItem,
+  NewChatButton,
+  tokens
+} from './components/ui/ChatComponents';
+import { useConversations } from './hooks/useConversations';
+import { getInitialQuickReplies } from './utils/quickReplies';
+import {
   SketchEgg,
   SketchTomato,
   SketchPasta,
@@ -61,7 +75,7 @@ const NavFridge = ({ active }: { active: boolean }) => (
 );
 
 // Types
-type Screen = 'home' | 'recipes' | 'fridge';
+type Screen = 'home' | 'chat' | 'recipes' | 'fridge';
 
 interface Recipe {
   id: number;
@@ -101,9 +115,20 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
   const [menuOpen, setMenuOpen] = useState(false);
   const [message, setMessage] = useState('');
-  const [chatHistory, setChatHistory] = useState<Array<{ role: string; content: string }>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [favorites, setFavorites] = useState<number[]>([0, 2]);
+
+  // Conversations hook with localStorage persistence
+  const {
+    conversations,
+    activeId,
+    messages,
+    createConversation,
+    deleteConversation,
+    setActiveConversation,
+    addMessage,
+    getHistoryForApi,
+  } = useConversations();
   const [shoppingList, setShoppingList] = useState<ShoppingItem[]>([
     { text: 'comprare uova', checked: true },
     { text: 'prendere il basilico', checked: true },
@@ -140,17 +165,21 @@ export default function App() {
     ));
   };
 
-  const sendMessage = async () => {
-    if (!message.trim() || isLoading) return;
+  const sendMessage = async (customMessage?: string) => {
+    const msgToSend = customMessage || message.trim();
+    if (!msgToSend || isLoading) return;
 
-    // Navigate to chat screen when sending a message
-    if (screen !== 'home') {
-      setScreen('home');
+    // Create new conversation if none active
+    let convId = activeId;
+    if (!convId) {
+      convId = createConversation();
     }
 
-    const userMessage = message.trim();
+    // Always navigate to chat screen when sending a message
+    setScreen('chat');
+
     setMessage('');
-    setChatHistory(prev => [...prev, { role: 'user', content: userMessage }]);
+    addMessage('user', msgToSend, convId);
     setIsLoading(true);
 
     try {
@@ -158,28 +187,36 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: userMessage,
-          history: chatHistory
+          message: msgToSend,
+          history: getHistoryForApi()
         }),
       });
 
       if (!response.ok) throw new Error('API error');
 
       const data = await response.json();
-      setChatHistory(prev => [...prev, { role: 'assistant', content: data.message }]);
+      addMessage('assistant', data.message, convId);
     } catch (error) {
       console.error('Chat error:', error);
-      setChatHistory(prev => [...prev, {
-        role: 'assistant',
-        content: 'Mi dispiace, c\'è stato un problema. Riprova tra poco!'
-      }]);
+      addMessage('assistant', 'Mi dispiace, c\'è stato un problema. Riprova tra poco!', convId);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Handle quick reply click
+  const handleQuickReply = (reply: string) => {
+    sendMessage(reply);
+  };
+
+  // Start new conversation
+  const handleNewConversation = () => {
+    createConversation();
+    setScreen('chat');
+  };
+
   const navItems = [
-    { id: 'home' as Screen, label: 'Chat', Icon: NavChat },
+    { id: 'chat' as Screen, label: 'Chat', Icon: NavChat },
     { id: 'recipes' as Screen, label: 'Ricette', Icon: NavBook },
     { id: 'fridge' as Screen, label: 'Frigo', Icon: NavFridge },
   ];
@@ -190,9 +227,9 @@ export default function App() {
       {/* Desktop Sidebar */}
       {!isMobile && (
         <aside style={{
-          width: 220,
+          width: 240,
           borderRight: '1px solid #E8E4DE',
-          padding: '32px 24px',
+          padding: '32px 20px',
           display: 'flex',
           flexDirection: 'column',
           gap: 8,
@@ -201,13 +238,42 @@ export default function App() {
           left: 0,
           bottom: 0,
           background: '#FAF7F2',
-          zIndex: 100
+          zIndex: 100,
+          overflowY: 'auto'
         }}>
-          <div style={{ marginBottom: 32 }}>
+          <div
+            style={{ marginBottom: 24, cursor: 'pointer' }}
+            onClick={() => setScreen('home')}
+          >
             <ZineText size="xl" style={{ display: 'block' }}>Chef AI</ZineText>
             <Underline width={80} />
           </div>
 
+          {/* New Chat Button */}
+          <NewChatButton onClick={handleNewConversation} />
+
+          {/* Conversation List */}
+          {conversations.length > 0 && (
+            <div style={{ marginTop: 8, marginBottom: 16 }}>
+              {conversations.slice(0, 8).map((conv) => (
+                <ConversationListItem
+                  key={conv.id}
+                  title={conv.title}
+                  isActive={conv.id === activeId && screen === 'chat'}
+                  onClick={() => {
+                    setActiveConversation(conv.id);
+                    setScreen('chat');
+                  }}
+                  onDelete={() => deleteConversation(conv.id)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Divider */}
+          <div style={{ height: 1, background: '#E8E4DE', margin: '8px 0' }} />
+
+          {/* Nav Items */}
           {navItems.map(({ id, label, Icon }) => (
             <button
               key={id}
@@ -324,7 +390,12 @@ export default function App() {
           <div style={{ maxWidth: 600, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             {isMobile ? (
               <>
-                <ZineText size="lg" style={{ display: 'block' }}>Chef AI</ZineText>
+                <div
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setScreen('home')}
+                >
+                  <ZineText size="lg" style={{ display: 'block' }}>Chef AI</ZineText>
+                </div>
                 <button
                   onClick={() => setMenuOpen(true)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
@@ -337,10 +408,11 @@ export default function App() {
                 <div>
                   <ZineText size="xl" style={{ display: 'block' }}>
                     {screen === 'home' && 'Cosa cuciniamo?'}
+                    {screen === 'chat' && 'Chat con Chef AI'}
                     {screen === 'recipes' && 'Le tue ricette'}
                     {screen === 'fridge' && 'Il tuo frigo'}
                   </ZineText>
-                  <Underline width={screen === 'home' ? 170 : 130} />
+                  <Underline width={screen === 'home' ? 170 : screen === 'chat' ? 160 : 130} />
                 </div>
                 <SketchStar size={24} />
               </>
@@ -396,7 +468,7 @@ export default function App() {
                   }}
                 />
                 <button
-                  onClick={sendMessage}
+                  onClick={() => sendMessage()}
                   disabled={isLoading}
                   style={{
                     background: isLoading ? '#8B857C' : '#2D2A26',
@@ -417,41 +489,6 @@ export default function App() {
                 </button>
               </div>
             </div>
-
-            {/* Chat History */}
-            {chatHistory.length > 0 && (
-              <div style={{ marginBottom: 28 }}>
-                {chatHistory.map((msg, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      marginBottom: 16,
-                      padding: 16,
-                      background: msg.role === 'user' ? '#F0EBE3' : 'white',
-                      border: msg.role === 'assistant' ? '1.5px dashed #C4C0B9' : 'none',
-                      borderRadius: 4
-                    }}
-                  >
-                    <ZineText size="xs" style={{ color: '#8B857C', display: 'block', marginBottom: 8 }}>
-                      {msg.role === 'user' ? 'Tu' : 'Chef AI'}
-                    </ZineText>
-                    <ZineText size="md" style={{ display: 'block', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-                      {msg.content}
-                    </ZineText>
-                  </div>
-                ))}
-                {isLoading && (
-                  <div style={{ padding: 16, border: '1.5px dashed #C4C0B9', borderRadius: 4 }}>
-                    <ZineText size="xs" style={{ color: '#8B857C', display: 'block', marginBottom: 8 }}>
-                      Chef AI
-                    </ZineText>
-                    <ZineText size="md" style={{ color: '#8B857C' }}>
-                      Sto pensando...
-                    </ZineText>
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Suggeriti */}
             <ZineText size="lg" underline style={{ display: 'block', marginBottom: 20 }}>
@@ -480,6 +517,139 @@ export default function App() {
                 ))}
               </div>
             </ZineNoteCard>
+          </div>
+        )}
+
+        {/* ============ CHAT ============ */}
+        {screen === 'chat' && (
+          <div style={{
+            maxWidth: 600,
+            margin: '0 auto',
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 'calc(100vh - 200px)'
+          }}>
+            {/* Chat Messages */}
+            <div style={{ flex: 1, marginBottom: 24 }}>
+              {messages.length === 0 && !isLoading ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                  <p style={{
+                    fontFamily: tokens.fonts.hand,
+                    fontSize: 22,
+                    color: tokens.colors.inkLight,
+                    marginBottom: 12
+                  }}>
+                    Inizia una conversazione!
+                  </p>
+                  <p style={{
+                    fontFamily: tokens.fonts.hand,
+                    fontSize: 17,
+                    color: tokens.colors.inkFaded,
+                    marginBottom: 24
+                  }}>
+                    Chiedimi una ricetta, consigli sugli ingredienti, o cosa cucinare stasera...
+                  </p>
+                  {/* Initial Quick Replies */}
+                  <QuickReplies>
+                    {getInitialQuickReplies().map((reply, i) => (
+                      <QuickReply key={i} onClick={() => handleQuickReply(reply)}>
+                        {reply}
+                      </QuickReply>
+                    ))}
+                  </QuickReplies>
+                </div>
+              ) : (
+                <>
+                  {messages.map((msg, i) => (
+                    msg.role === 'user' ? (
+                      <UserMessage key={msg.id}>{msg.content}</UserMessage>
+                    ) : (
+                      <div key={msg.id}>
+                        <AIMessage>{msg.content}</AIMessage>
+
+                        {/* Show parsed recipe if available */}
+                        {msg.parsedRecipe && (
+                          <RecipeInChat
+                            title={msg.parsedRecipe.name}
+                            time={msg.parsedRecipe.time}
+                            servings={msg.parsedRecipe.servings}
+                            ingredients={msg.parsedRecipe.ingredients.map(ing => ({ name: ing }))}
+                            steps={msg.parsedRecipe.steps}
+                          />
+                        )}
+
+                        {/* Show quick replies for the last AI message */}
+                        {i === messages.length - 1 && msg.quickReplies && msg.quickReplies.length > 0 && !isLoading && (
+                          <QuickReplies>
+                            {msg.quickReplies.map((reply, ri) => (
+                              <QuickReply key={ri} onClick={() => handleQuickReply(reply)}>
+                                {reply}
+                              </QuickReply>
+                            ))}
+                          </QuickReplies>
+                        )}
+                      </div>
+                    )
+                  ))}
+                  {isLoading && <LoadingDots />}
+                </>
+              )}
+            </div>
+
+            {/* Chat Input - Sticky Bottom */}
+            <div style={{
+              position: 'sticky',
+              bottom: 0,
+              background: tokens.colors.paper,
+              paddingTop: 16,
+              paddingBottom: 16,
+              borderTop: `1px solid ${tokens.colors.paperDark}`
+            }}>
+              <DashedBox style={{
+                background: tokens.colors.white,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12
+              }}>
+                <input
+                  type="text"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                  placeholder='Scrivi un messaggio...'
+                  disabled={isLoading}
+                  style={{
+                    flex: 1,
+                    border: 'none',
+                    background: 'transparent',
+                    fontFamily: tokens.fonts.hand,
+                    fontSize: 18,
+                    color: tokens.colors.ink,
+                    outline: 'none'
+                  }}
+                />
+                <button
+                  onClick={() => sendMessage()}
+                  disabled={isLoading}
+                  style={{
+                    background: isLoading ? tokens.colors.inkLight : tokens.colors.ink,
+                    color: tokens.colors.paper,
+                    border: 'none',
+                    borderRadius: 20,
+                    padding: '10px 20px',
+                    fontFamily: tokens.fonts.hand,
+                    fontSize: 16,
+                    cursor: isLoading ? 'wait' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    flexShrink: 0
+                  }}
+                >
+                  {isLoading ? 'Penso...' : 'Invia'} <span style={{ fontSize: 14 }}>✨</span>
+                </button>
+              </DashedBox>
+            </div>
           </div>
         )}
 
@@ -713,10 +883,10 @@ export default function App() {
         )}
         </main>
 
-        {/* Chat FAB - visible on recipes and fridge screens */}
-        {screen !== 'home' && (
+        {/* Chat FAB - visible only on recipes and fridge screens */}
+        {(screen === 'recipes' || screen === 'fridge') && (
           <button
-            onClick={() => setScreen('home')}
+            onClick={() => setScreen('chat')}
             style={{
               position: 'fixed',
               bottom: isMobile ? 24 : 32,

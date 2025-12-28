@@ -9,7 +9,7 @@ import React from 'react';
 // 🎨 DESIGN TOKENS
 // ============================================
 
-const tokens = {
+export const tokens = {
   colors: {
     ink: '#2D2A26',
     inkLight: '#8B857C',
@@ -27,13 +27,13 @@ const tokens = {
 // 🖼️ DECORAZIONI
 // ============================================
 
-const Asterisk = ({ size = 12 }: { size?: number }) => (
+export const Asterisk = ({ size = 12 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
     <path d="M8 1 L8 15 M1 8 L15 8 M3 3 L13 13 M13 3 L3 13" stroke={tokens.colors.ink} strokeWidth="1.2" strokeLinecap="round"/>
   </svg>
 );
 
-const Brace = ({ height = 40 }: { height?: number }) => (
+export const Brace = ({ height = 40 }: { height?: number }) => (
   <svg width="10" height={height} viewBox={`0 0 10 ${height}`} fill="none" style={{ flexShrink: 0 }}>
     <path d={`M8 2 Q2 2 2 ${height*0.25} L2 ${height*0.45} Q2 ${height*0.5} 0 ${height*0.5} Q2 ${height*0.5} 2 ${height*0.55} L2 ${height*0.75} Q2 ${height-2} 8 ${height-2}`} stroke={tokens.colors.inkLight} strokeWidth="1" fill="none" strokeLinecap="round"/>
   </svg>
@@ -43,7 +43,7 @@ const Brace = ({ height = 40 }: { height?: number }) => (
 // 🍳 FOOD ICONS
 // ============================================
 
-const FoodIcons: Record<string, React.FC<{ size?: number }>> = {
+export const FoodIcons: Record<string, React.FC<{ size?: number }>> = {
   egg: ({ size = 28 }) => (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
       <ellipse cx="16" cy="18" rx="8" ry="11" stroke={tokens.colors.ink} strokeWidth="1.2"/>
@@ -103,7 +103,8 @@ interface BoxProps {
   style?: React.CSSProperties;
 }
 
-const SketchBox: React.FC<BoxProps> = ({ children, style = {} }) => (
+// Box con angoli sketch ⌐ ⌐
+export const SketchBox: React.FC<BoxProps> = ({ children, style = {} }) => (
   <div style={{ position: 'relative', padding: 16, ...style }}>
     <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }} viewBox="0 0 200 100" preserveAspectRatio="none" fill="none">
       <path d="M4 12 L4 4 L12 4" stroke={tokens.colors.ink} strokeWidth="1.2" strokeLinecap="round"/>
@@ -115,7 +116,8 @@ const SketchBox: React.FC<BoxProps> = ({ children, style = {} }) => (
   </div>
 );
 
-const DashedBox: React.FC<BoxProps> = ({ children, style = {} }) => (
+// Box tratteggiato
+export const DashedBox: React.FC<BoxProps> = ({ children, style = {} }) => (
   <div style={{ border: `1.5px dashed ${tokens.colors.inkFaded}`, borderRadius: 4, padding: 14, ...style }}>
     {children}
   </div>
@@ -129,6 +131,10 @@ interface MessageProps {
   children: React.ReactNode;
 }
 
+/**
+ * Messaggio dell'utente
+ * Box tratteggiato allineato a destra
+ */
 export const UserMessage: React.FC<MessageProps> = ({ children }) => (
   <div style={{
     display: 'flex',
@@ -152,6 +158,10 @@ export const UserMessage: React.FC<MessageProps> = ({ children }) => (
   </div>
 );
 
+/**
+ * Messaggio dell'AI
+ * Testo fluido senza box
+ */
 export const AIMessage: React.FC<MessageProps> = ({ children }) => (
   <div style={{ marginBottom: 16 }}>
     <p style={{
@@ -160,6 +170,7 @@ export const AIMessage: React.FC<MessageProps> = ({ children }) => (
       color: tokens.colors.ink,
       margin: 0,
       lineHeight: 1.5,
+      whiteSpace: 'pre-wrap',
     }}>
       {children}
     </p>
@@ -179,6 +190,10 @@ interface RecipeCardInlineProps {
   onClick?: () => void;
 }
 
+/**
+ * Card ricetta inline nella chat
+ * Con icona, titolo, descrizione, tempo e difficoltà
+ */
 export const RecipeCardInline: React.FC<RecipeCardInlineProps> = ({
   icon = 'bowl',
   title,
@@ -253,12 +268,20 @@ export const RecipeCardInline: React.FC<RecipeCardInlineProps> = ({
   );
 };
 
+/**
+ * Lista di ricette
+ * Wrapper per più RecipeCardInline
+ */
 export const RecipeList: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div style={{ marginTop: 12, marginBottom: 16 }}>
     {children}
   </div>
 );
 
+/**
+ * Tip/consiglio della nonna
+ * Con parentesi graffa a sinistra
+ */
 export const Tip: React.FC<MessageProps> = ({ children }) => (
   <div style={{
     display: 'flex',
@@ -291,6 +314,10 @@ interface QuickReplyProps {
   onClick?: () => void;
 }
 
+/**
+ * Quick Reply button
+ * Pill cliccabile
+ */
 export const QuickReply: React.FC<QuickReplyProps> = ({ children, onClick }) => (
   <button
     onClick={onClick}
@@ -310,6 +337,9 @@ export const QuickReply: React.FC<QuickReplyProps> = ({ children, onClick }) => 
   </button>
 );
 
+/**
+ * Container per quick replies
+ */
 export const QuickReplies: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div style={{
     display: 'flex',
@@ -325,6 +355,9 @@ export const QuickReplies: React.FC<{ children: React.ReactNode }> = ({ children
 // ⏳ LOADING & DIVIDER
 // ============================================
 
+/**
+ * Loading dots animati
+ */
 export const LoadingDots: React.FC = () => (
   <div style={{ display: 'flex', gap: 6, padding: '16px 0' }}>
     {[0, 1, 2].map(i => (
@@ -348,6 +381,9 @@ export const LoadingDots: React.FC = () => (
   </div>
 );
 
+/**
+ * Divider semplice
+ */
 export const Divider: React.FC = () => (
   <div style={{
     height: 1,
@@ -366,27 +402,13 @@ interface RecipeHeaderProps {
   description?: string;
   time?: string;
   difficulty?: string;
-  servings?: number;
+  servings?: number | string;
   icon?: string;
 }
 
-const DifficultyDots: React.FC<{ level?: number; max?: number }> = ({ level = 1, max = 3 }) => (
-  <div style={{ display: 'flex', gap: 3 }}>
-    {Array.from({ length: max }).map((_, i) => (
-      <div
-        key={i}
-        style={{
-          width: 8,
-          height: 8,
-          borderRadius: '50%',
-          border: `1.2px solid ${tokens.colors.ink}`,
-          background: i < level ? tokens.colors.ink : 'transparent',
-        }}
-      />
-    ))}
-  </div>
-);
-
+/**
+ * Header della ricetta con titolo e meta info
+ */
 export const RecipeHeader: React.FC<RecipeHeaderProps> = ({
   title,
   description,
@@ -396,7 +418,6 @@ export const RecipeHeader: React.FC<RecipeHeaderProps> = ({
   icon = 'bowl'
 }) => {
   const IconComponent = FoodIcons[icon] || FoodIcons.bowl;
-  const difficultyLevel = difficulty === 'facile' ? 1 : difficulty === 'media' ? 2 : 3;
 
   return (
     <div style={{ marginBottom: 24 }}>
@@ -426,6 +447,7 @@ export const RecipeHeader: React.FC<RecipeHeaderProps> = ({
         </div>
       </div>
 
+      {/* Meta info */}
       <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
         {time && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -437,7 +459,6 @@ export const RecipeHeader: React.FC<RecipeHeaderProps> = ({
         )}
         {difficulty && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <DifficultyDots level={difficultyLevel} />
             <span style={{ fontFamily: tokens.fonts.hand, fontSize: 15, color: tokens.colors.inkLight }}>
               {difficulty}
             </span>
@@ -447,7 +468,7 @@ export const RecipeHeader: React.FC<RecipeHeaderProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 14 }}>👤</span>
             <span style={{ fontFamily: tokens.fonts.hand, fontSize: 15, color: tokens.colors.inkLight }}>
-              {servings} {servings > 1 ? 'persone' : 'persona'}
+              {servings} {typeof servings === 'number' && servings > 1 ? 'persone' : 'persona'}
             </span>
           </div>
         )}
@@ -471,6 +492,9 @@ interface IngredientItemProps extends Ingredient {
   onChange?: (checked: boolean) => void;
 }
 
+/**
+ * Singolo ingrediente con checkbox
+ */
 export const IngredientItem: React.FC<IngredientItemProps> = ({
   amount,
   unit,
@@ -523,6 +547,9 @@ interface IngredientsListProps {
   onToggle?: (index: number, checked: boolean) => void;
 }
 
+/**
+ * Lista ingredienti con titolo
+ */
 export const IngredientsList: React.FC<IngredientsListProps> = ({
   ingredients = [],
   checkedItems = [],
@@ -564,15 +591,19 @@ interface Step {
 interface RecipeStepProps {
   number: number;
   text: string;
-  tip?: string;
+  tip?: string | null;
 }
 
+/**
+ * Singolo step della ricetta
+ */
 export const RecipeStep: React.FC<RecipeStepProps> = ({ number, text, tip }) => (
   <div style={{
     display: 'flex',
     gap: 14,
     marginBottom: 20,
   }}>
+    {/* Numero step */}
     <div style={{
       width: 28,
       height: 28,
@@ -600,6 +631,7 @@ export const RecipeStep: React.FC<RecipeStepProps> = ({ number, text, tip }) => 
         {text}
       </p>
 
+      {/* Tip opzionale per questo step */}
       {tip && (
         <div style={{
           display: 'flex',
@@ -627,6 +659,9 @@ interface StepsListProps {
   steps?: (string | Step)[];
 }
 
+/**
+ * Lista step con titolo
+ */
 export const StepsList: React.FC<StepsListProps> = ({ steps = [] }) => (
   <div style={{ marginBottom: 28 }}>
     <h3 style={{
@@ -642,12 +677,15 @@ export const StepsList: React.FC<StepsListProps> = ({ steps = [] }) => (
         key={i}
         number={i + 1}
         text={typeof step === 'string' ? step : step.text}
-        tip={typeof step === 'object' ? step.tip : undefined}
+        tip={typeof step === 'object' ? step.tip : null}
       />
     ))}
   </div>
 );
 
+/**
+ * Nota finale della ricetta
+ */
 export const RecipeNote: React.FC<MessageProps> = ({ children }) => (
   <SketchBox style={{ background: `${tokens.colors.paperDark}40`, marginTop: 20 }}>
     <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
@@ -676,7 +714,7 @@ interface RecipeDetailProps {
   description?: string;
   time?: string;
   difficulty?: string;
-  servings?: number;
+  servings?: number | string;
   ingredients?: Ingredient[];
   steps?: (string | Step)[];
   note?: string;
@@ -684,6 +722,9 @@ interface RecipeDetailProps {
   onIngredientToggle?: (index: number, checked: boolean) => void;
 }
 
+/**
+ * Ricetta completa - tutto insieme
+ */
 export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   icon,
   title,
@@ -721,11 +762,18 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   </div>
 );
 
+/**
+ * Ricetta inline nella chat (versione espansa)
+ * Mostra ricetta completa dentro la conversazione
+ * Senza cornice pesante - solo separatori leggeri
+ */
 export const RecipeInChat: React.FC<Omit<RecipeDetailProps, 'checkedIngredients' | 'onIngredientToggle'>> = (props) => (
-  <div style={{ marginBottom: 24 }}>
-    <SketchBox style={{ background: tokens.colors.white, padding: 20 }}>
-      <RecipeDetail {...props} />
-    </SketchBox>
+  <div style={{
+    marginBottom: 24,
+    paddingTop: 8,
+    paddingBottom: 8,
+  }}>
+    <RecipeDetail {...props} />
   </div>
 );
 
@@ -751,6 +799,10 @@ interface AIResponseBlockProps {
   onQuickReplyClick?: (reply: string) => void;
 }
 
+/**
+ * Contenitore per un blocco di risposta AI completo
+ * Raggruppa messaggio + ricette + tip + quick replies
+ */
 export const AIResponseBlock: React.FC<AIResponseBlockProps> = ({
   message,
   recipes = [],
@@ -760,8 +812,10 @@ export const AIResponseBlock: React.FC<AIResponseBlockProps> = ({
   onQuickReplyClick,
 }) => (
   <div style={{ marginBottom: 24 }}>
+    {/* Messaggio principale */}
     {message && <AIMessage>{message}</AIMessage>}
 
+    {/* Lista ricette */}
     {recipes.length > 0 && (
       <RecipeList>
         {recipes.map((recipe, i) => (
@@ -778,8 +832,10 @@ export const AIResponseBlock: React.FC<AIResponseBlockProps> = ({
       </RecipeList>
     )}
 
+    {/* Tip della nonna */}
     {tip && <Tip>{tip}</Tip>}
 
+    {/* Quick replies */}
     {quickReplies.length > 0 && (
       <QuickReplies>
         {quickReplies.map((reply, i) => (
@@ -793,7 +849,97 @@ export const AIResponseBlock: React.FC<AIResponseBlockProps> = ({
 );
 
 // ============================================
-// 📤 EXPORTS
+// 📋 CONVERSATION LIST
 // ============================================
 
-export { tokens, FoodIcons, SketchBox, DashedBox, Asterisk, Brace };
+interface ConversationListItemProps {
+  title: string;
+  isActive?: boolean;
+  onClick?: () => void;
+  onDelete?: () => void;
+}
+
+/**
+ * Item nella lista conversazioni
+ */
+export const ConversationListItem: React.FC<ConversationListItemProps> = ({
+  title,
+  isActive = false,
+  onClick,
+  onDelete,
+}) => (
+  <div
+    onClick={onClick}
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '10px 12px',
+      borderRadius: 8,
+      cursor: 'pointer',
+      background: isActive ? tokens.colors.paperDark : 'transparent',
+      transition: 'background 0.15s',
+    }}
+  >
+    <span style={{
+      fontFamily: tokens.fonts.hand,
+      fontSize: 15,
+      color: isActive ? tokens.colors.ink : tokens.colors.inkLight,
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+      flex: 1,
+    }}>
+      {title}
+    </span>
+    {onDelete && (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          padding: 4,
+          opacity: 0.5,
+          transition: 'opacity 0.15s',
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <path d="M4 4 L12 12 M12 4 L4 12" stroke={tokens.colors.inkLight} strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      </button>
+    )}
+  </div>
+);
+
+/**
+ * Bottone "Nuova Chat"
+ */
+export const NewChatButton: React.FC<{ onClick?: () => void }> = ({ onClick }) => (
+  <button
+    onClick={onClick}
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      width: '100%',
+      padding: '12px 14px',
+      background: 'transparent',
+      border: `1.5px dashed ${tokens.colors.inkFaded}`,
+      borderRadius: 8,
+      cursor: 'pointer',
+      fontFamily: tokens.fonts.hand,
+      fontSize: 15,
+      color: tokens.colors.inkLight,
+      transition: 'all 0.15s',
+    }}
+  >
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M8 2 L8 14 M2 8 L14 8" stroke={tokens.colors.inkLight} strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+    Nuova chat
+  </button>
+);

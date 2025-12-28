@@ -4,6 +4,7 @@
 // ============================================
 
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
 
 // ============================================
 // 🎨 DESIGN TOKENS
@@ -160,20 +161,86 @@ export const UserMessage: React.FC<MessageProps> = ({ children }) => (
 
 /**
  * Messaggio dell'AI
- * Testo fluido senza box
+ * Con rendering Markdown
  */
 export const AIMessage: React.FC<MessageProps> = ({ children }) => (
-  <div style={{ marginBottom: 16 }}>
-    <p style={{
-      fontFamily: tokens.fonts.hand,
-      fontSize: 19,
-      color: tokens.colors.ink,
-      margin: 0,
-      lineHeight: 1.5,
-      whiteSpace: 'pre-wrap',
-    }}>
-      {children}
-    </p>
+  <div style={{ marginBottom: 16 }} className="ai-message">
+    <ReactMarkdown
+      components={{
+        p: ({ children }) => (
+          <p style={{
+            fontFamily: tokens.fonts.hand,
+            fontSize: 19,
+            color: tokens.colors.ink,
+            margin: '0 0 12px 0',
+            lineHeight: 1.5,
+          }}>
+            {children}
+          </p>
+        ),
+        strong: ({ children }) => (
+          <strong style={{ fontWeight: 700 }}>{children}</strong>
+        ),
+        em: ({ children }) => (
+          <em style={{ fontStyle: 'italic' }}>{children}</em>
+        ),
+        h2: ({ children }) => (
+          <h2 style={{
+            fontFamily: tokens.fonts.hand,
+            fontSize: 24,
+            color: tokens.colors.ink,
+            margin: '20px 0 12px 0',
+            fontWeight: 700,
+          }}>
+            {children}
+          </h2>
+        ),
+        h3: ({ children }) => (
+          <h3 style={{
+            fontFamily: tokens.fonts.hand,
+            fontSize: 21,
+            color: tokens.colors.ink,
+            margin: '16px 0 10px 0',
+            fontWeight: 700,
+          }}>
+            {children}
+          </h3>
+        ),
+        ul: ({ children }) => (
+          <ul style={{
+            fontFamily: tokens.fonts.hand,
+            fontSize: 18,
+            color: tokens.colors.ink,
+            margin: '8px 0',
+            paddingLeft: 20,
+            listStyleType: 'disc',
+          }}>
+            {children}
+          </ul>
+        ),
+        ol: ({ children }) => (
+          <ol style={{
+            fontFamily: tokens.fonts.hand,
+            fontSize: 18,
+            color: tokens.colors.ink,
+            margin: '8px 0',
+            paddingLeft: 20,
+          }}>
+            {children}
+          </ol>
+        ),
+        li: ({ children }) => (
+          <li style={{
+            marginBottom: 6,
+            lineHeight: 1.5,
+          }}>
+            {children}
+          </li>
+        ),
+      }}
+    >
+      {typeof children === 'string' ? children : String(children)}
+    </ReactMarkdown>
   </div>
 );
 

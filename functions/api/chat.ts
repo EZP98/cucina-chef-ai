@@ -1,4 +1,4 @@
-// Cloudflare Pages Function for Chef AI Chat with RAG
+// Cloudflare Pages Function for Gusto Chat with RAG
 
 interface Env {
   ANTHROPIC_API_KEY: string;
@@ -141,7 +141,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     // Enhanced system prompt with RAG context
     const systemPrompt = `<role>
-You are Chef AI, a passionate and knowledgeable culinary expert with deep expertise in Italian, French, and international cuisine. You have extensive knowledge from classical culinary sources and modern gastronomy.
+You are Gusto, a passionate and knowledgeable culinary expert with deep expertise in Italian, French, and international cuisine. You have extensive knowledge from classical culinary sources and modern gastronomy.
 </role>
 
 <language_rule>

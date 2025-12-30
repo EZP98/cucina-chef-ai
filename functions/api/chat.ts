@@ -1,7 +1,8 @@
-// Cloudflare Pages Function for Gusto Chat with RAG
+// Cloudflare Pages Function for Gusto Chat with RAG + Perplexity
 
 interface Env {
   ANTHROPIC_API_KEY: string;
+  PERPLEXITY_API_KEY: string;
 }
 
 // RAG Index loaded from static file
@@ -75,15 +76,89 @@ function searchChunks(query: string, chunks: RagChunk[], topK: number = 5): RagC
 function formatContext(chunks: RagChunk[]): string {
   if (chunks.length === 0) return '';
 
-  let context = '\n\n<relevant_knowledge>\n';
+  let context = '\n\n<rag_knowledge>\n';
 
   for (const chunk of chunks) {
     context += `${chunk.txt}\n\n`;
   }
 
-  context += '</relevant_knowledge>';
+  context += '</rag_knowledge>';
 
   return context;
+}
+
+// Detect if query needs Perplexity (detailed recipes, techniques, traditional dishes)
+function shouldUsePerplexity(message: string): boolean {
+  const lowerMsg = message.toLowerCase();
+
+  // Keywords that suggest need for detailed/authoritative info
+  const detailKeywords = [
+    'come si fa', 'come si prepara', 'come preparare', 'come fare',
+    'ricetta', 'ricetta originale', 'ricetta tradizionale', 'ricetta autentica',
+    'preparazione', 'procedimento', 'tecnica',
+    'ingredienti', 'dosi', 'proporzioni',
+    'storia', 'origine', 'tradizione',
+    'segreto', 'trucco', 'consiglio',
+    'differenza tra', 'meglio', 'quale',
+    'scialatielli', 'carbonara', 'amatriciana', 'cacio e pepe',
+    'risotto', 'ossobuco', 'cotoletta', 'tiramisu',
+    'pasta fresca', 'pasta fatta in casa', 'impasto',
+    'lievitazione', 'fermentazione', 'marinatura',
+    'temperatura', 'cottura', 'tempo di'
+  ];
+
+  return detailKeywords.some(kw => lowerMsg.includes(kw));
+}
+
+// Call Perplexity API for detailed culinary information
+async function queryPerplexity(message: string, apiKey: string): Promise<string | null> {
+  try {
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'sonar',
+        messages: [
+          {
+            role: 'system',
+            content: `Sei un esperto di cucina italiana e internazionale. Rispondi in modo dettagliato e tecnico alle domande culinarie.
+Includi:
+- Storia e origine dei piatti quando rilevante
+- Ingredienti precisi con quantità
+- Tecniche di preparazione dettagliate
+- Consigli pratici e errori da evitare
+- Varianti regionali se esistono
+
+NON usare tabelle markdown. Usa liste puntate e paragrafi.
+Rispondi nella stessa lingua della domanda.`
+          },
+          {
+            role: 'user',
+            content: message
+          }
+        ],
+        temperature: 0.2,
+        max_tokens: 2000
+      })
+    });
+
+    if (!response.ok) {
+      console.error('Perplexity API error:', response.status);
+      return null;
+    }
+
+    const data = await response.json() as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+
+    return data.choices?.[0]?.message?.content || null;
+  } catch (error) {
+    console.error('Perplexity error:', error);
+    return null;
+  }
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -123,13 +198,26 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }
     }
 
-    // Search for relevant context
+    // Search for relevant RAG context
     let ragContext = '';
     if (ragIndex && ragIndex.chunks) {
       const relevantChunks = searchChunks(message, ragIndex.chunks, 5);
       if (relevantChunks.length > 0) {
         ragContext = formatContext(relevantChunks);
-        console.log(`Found ${relevantChunks.length} relevant chunks`);
+        console.log(`Found ${relevantChunks.length} relevant RAG chunks`);
+      }
+    }
+
+    // Query Perplexity for detailed recipe/technique questions
+    let perplexityContext = '';
+    if (shouldUsePerplexity(message) && env.PERPLEXITY_API_KEY) {
+      console.log('Querying Perplexity for detailed info...');
+      const perplexityResult = await queryPerplexity(message, env.PERPLEXITY_API_KEY);
+      if (perplexityResult) {
+        perplexityContext = `\n\n<web_knowledge>
+${perplexityResult}
+</web_knowledge>`;
+        console.log('Perplexity context added');
       }
     }
 
@@ -139,7 +227,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       { role: 'user', content: message }
     ];
 
-    // Enhanced system prompt with RAG context
+    // Enhanced system prompt with RAG + Perplexity context
     const systemPrompt = `<role>
 You are Gusto, a passionate and knowledgeable culinary expert with deep expertise in Italian, French, and international cuisine. You have extensive knowledge from classical culinary sources and modern gastronomy.
 </role>
@@ -155,44 +243,43 @@ CRITICAL: Detect the user's language from their message and ALWAYS respond in th
 - Share knowledge naturally without being pedantic
 </personality>
 
-<knowledge>
-You have deep knowledge of:
-- Classical French cuisine (techniques, sauces, preparations)
-- Traditional Italian cooking (regional recipes, pasta, risotto)
-- Flavor pairings and ingredient combinations
-- Cooking techniques from basic to advanced
-- Ingredient substitutions and adaptations
-</knowledge>
+<knowledge_sources>
+You have access to two knowledge sources:
+1. <rag_knowledge> - Internal database of chef recipes and techniques
+2. <web_knowledge> - Real-time web search results from Perplexity
 
-<rag_priority>
-CRITICAL: When <relevant_knowledge> is provided below, it contains VERIFIED and UP-TO-DATE information that MUST take precedence over your training data.
+When both sources are available:
+- Use the most detailed and accurate information from either source
+- Combine complementary information naturally
+- For traditional recipes, prefer historically accurate details
+- For techniques, use the most practical step-by-step instructions
+</knowledge_sources>
 
-Rules for using RAG context:
-1. If the context mentions specific facts (restaurant names, star ratings, dish names, ingredients), use EXACTLY those details - do not substitute with your own knowledge
-2. If the context says a chef has "3 stars" or works at "La Rei Natura", use those exact facts even if your training says otherwise
-3. For Michelin-starred chefs and their signature dishes, the RAG context is MORE ACCURATE than your training data
-4. If no relevant context is provided, you may use your general culinary knowledge
-5. NEVER invent specific details (star ratings, restaurant names, dish compositions) that are not in the context
-6. If unsure about specific facts not in the context, give general information or say you'd need to verify
+<formatting_rules>
+CRITICAL FORMATTING:
+- NEVER use markdown tables (no | or --- table syntax)
+- Use bullet points (-) for ingredient lists
+- Use numbered lists (1. 2. 3.) for steps
+- Use **bold** only for section headers
+- Keep paragraphs short and readable
+- NO emoji - the UI has a hand-drawn style
+</formatting_rules>
 
-Speak naturally as an expert - don't mention "according to my sources" or cite the RAG. Just use the information as your own knowledge.
-</rag_priority>
+<response_style>
+- Write conversationally, as if explaining to a friend in your kitchen
+- Include the "why" behind techniques, not just the "how"
+- Share practical tips that make a real difference
+- Mention common mistakes to avoid
+- If there's history or origin worth sharing, include it briefly
+</response_style>
 
 <rules>
-- Keep responses concise but complete (2-4 paragraphs unless a full recipe is requested)
-- When suggesting recipes, offer 2-3 options with brief descriptions
-- For full recipes, include: ingredients list, clear steps, timing, and practical tips
-- NEVER use emoji in your responses - the UI has a hand-drawn style that doesn't use emoji
-- Give practical tips a home cook can actually use
-- If asked about ingredients, suggest what to cook with them
+- For recipe requests: ingredients list → clear numbered steps → practical tips
+- For technique questions: explain the method → why it works → common mistakes
+- For ingredient questions: suggest 2-3 dishes → brief descriptions
 - Adapt complexity to user's apparent skill level
+- If unsure about specific facts, say so rather than inventing
 </rules>
-
-<response_format>
-For recipe suggestions: Brief intro + 2-3 options with name, description, time
-For full recipes: Ingredients → Steps → Tips
-For questions: Direct answer with practical context
-</response_format>
 ${menuMode ? `
 <menu_mode>
 IMPORTANT: The user has MENU MODE enabled. They want a COMPLETE MENU, not just a single dish.
@@ -203,9 +290,8 @@ When responding:
 3. Suggest wine pairings if appropriate
 4. Consider ingredient availability and cooking time logistics
 5. Make sure courses complement each other in flavors and textures
-6. Format the menu clearly with sections for each course
 
-Example structure:
+Format:
 **Menu [tema/occasione]**
 
 **Antipasto** - Nome piatto
@@ -214,16 +300,7 @@ Breve descrizione...
 **Primo** - Nome piatto
 Breve descrizione...
 
-**Secondo** - Nome piatto
-Breve descrizione...
-
-**Contorno** - Nome piatto
-Breve descrizione...
-
-**Dolce** - Nome piatto
-Breve descrizione...
-
-**Abbinamento vini:** ...
+(etc.)
 </menu_mode>
 ` : ''}
 ${dietMode && dietMode !== 'none' ? `
@@ -242,7 +319,8 @@ IMPORTANT: The user follows a ${
 ALL recipe suggestions and menus MUST comply with this diet. If the user asks for something incompatible, suggest a compliant alternative.
 </diet_mode>
 ` : ''}
-${ragContext}`;
+${ragContext}
+${perplexityContext}`;
 
     // Call Anthropic API with streaming enabled
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -254,8 +332,8 @@ ${ragContext}`;
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1500,
-        stream: true,  // Enable streaming
+        max_tokens: 2000,
+        stream: true,
         system: systemPrompt,
         messages: messages,
       }),

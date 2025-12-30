@@ -7,9 +7,9 @@ import {
   ZinePhotoCard,
   HandDrawnFrame,
   Underline,
-  SketchStar,
   SketchHeart
 } from './components/ui/ZineUI';
+import { GustoLogo } from './components/ui/GustoLogo';
 import {
   UserMessage,
   AIMessage,
@@ -422,11 +422,14 @@ export default function App() {
           overflowY: 'auto'
         }}>
           <div
-            style={{ marginBottom: 24, cursor: 'pointer' }}
+            style={{ marginBottom: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}
             onClick={() => setScreen('home')}
           >
-            <ZineText size="xl" style={{ display: 'block' }}>Chef AI</ZineText>
-            <Underline width={80} />
+            <GustoLogo size={32} />
+            <div>
+              <ZineText size="xl" style={{ display: 'block' }}>Gusto</ZineText>
+              <Underline width={60} />
+            </div>
           </div>
 
           {/* New Chat Button */}
@@ -548,7 +551,7 @@ export default function App() {
             <div style={{ marginTop: 'auto', position: 'absolute', bottom: 32, left: 24, right: 24 }}>
               <div style={{ borderTop: '1px solid #E8E4DE', paddingTop: 16 }}>
                 <ZineText size="xs" style={{ color: '#A8A4A0', display: 'block', textAlign: 'center' }}>
-                  Chef AI - powered by AI
+                  Gusto - powered by AI
                 </ZineText>
               </div>
             </div>
@@ -571,10 +574,11 @@ export default function App() {
             {isMobile ? (
               <>
                 <div
-                  style={{ cursor: 'pointer' }}
+                  style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
                   onClick={() => setScreen('home')}
                 >
-                  <ZineText size="lg" style={{ display: 'block' }}>Chef AI</ZineText>
+                  <GustoLogo size={24} />
+                  <ZineText size="lg" style={{ display: 'block' }}>Gusto</ZineText>
                 </div>
                 <button
                   onClick={() => setMenuOpen(true)}
@@ -588,13 +592,13 @@ export default function App() {
                 <div>
                   <ZineText size="xl" style={{ display: 'block' }}>
                     {screen === 'home' && 'Cosa cuciniamo?'}
-                    {screen === 'chat' && 'Chat con Chef AI'}
+                    {screen === 'chat' && 'Chat con Gusto'}
                     {screen === 'recipes' && 'Le tue ricette'}
                     {screen === 'pantry' && 'La tua dispensa'}
                   </ZineText>
-                  <Underline width={screen === 'home' ? 170 : screen === 'chat' ? 160 : 130} />
+                  <Underline width={screen === 'home' ? 170 : screen === 'chat' ? 150 : 130} />
                 </div>
-                <SketchStar size={24} />
+                <GustoLogo size={28} />
               </>
             )}
           </div>

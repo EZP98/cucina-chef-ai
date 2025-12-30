@@ -338,16 +338,16 @@ You have access to two knowledge sources:
 1. <rag_knowledge> - Internal database of chef recipes and techniques
 2. <web_knowledge> - Real-time web search results from Perplexity
 
-When both sources are available:
-- Use the most detailed and accurate information from either source
-- Combine complementary information naturally
-- For traditional recipes, prefer historically accurate details
-- For techniques, use the most practical step-by-step instructions
+CRITICAL: When <web_knowledge> is provided, it contains rich, detailed information. DO NOT summarize or simplify it excessively. Preserve:
+- Historical details (who invented the dish, when, where)
+- Technical notes on ingredients (why each matters)
+- Regional variations and authentic versions
+- Classic pairings and traditional sauces
 </knowledge_sources>
 
 <formatting_rules>
 CRITICAL FORMATTING:
-- NEVER use markdown tables (no | or --- table syntax)
+- NEVER use markdown tables (no | or --- table syntax) - convert any tables to bullet lists
 - Use bullet points (-) for ingredient lists
 - Use numbered lists (1. 2. 3.) for steps
 - Use **bold** only for section headers
@@ -360,11 +360,13 @@ CRITICAL FORMATTING:
 - Include the "why" behind techniques, not just the "how"
 - Share practical tips that make a real difference
 - Mention common mistakes to avoid
-- If there's history or origin worth sharing, include it briefly
+- Include history and origin when available (chef who invented it, year, place)
+- Describe regional variations if they exist
+- For pasta dishes, include the classic sauce/condiment that pairs with it
 </response_style>
 
 <rules>
-- For recipe requests: ingredients list \u2192 clear numbered steps \u2192 practical tips
+- For recipe requests: brief history \u2192 ingredients with notes \u2192 numbered steps \u2192 classic pairing/sauce \u2192 tips and mistakes to avoid
 - For technique questions: explain the method \u2192 why it works \u2192 common mistakes
 - For ingredient questions: suggest 2-3 dishes \u2192 brief descriptions
 - Adapt complexity to user's apparent skill level
@@ -970,7 +972,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// ../.wrangler/tmp/bundle-cw2OP1/middleware-insertion-facade.js
+// ../.wrangler/tmp/bundle-SKXySh/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -1002,7 +1004,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// ../.wrangler/tmp/bundle-cw2OP1/middleware-loader.entry.ts
+// ../.wrangler/tmp/bundle-SKXySh/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

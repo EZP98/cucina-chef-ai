@@ -144,16 +144,17 @@ export function AuthModal({ isOpen, onClose, onLogin, onRegister, t }: AuthModal
             position: 'relative',
             padding: '40px 36px',
             background: '#FFFFFF',
+            overflow: 'hidden',
           }}
         >
           {/* Hand-drawn frame */}
           <svg
             style={{
               position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
+              top: -1,
+              left: -1,
+              width: 'calc(100% + 2px)',
+              height: 'calc(100% + 2px)',
               pointerEvents: 'none',
             }}
             viewBox="0 0 100 100"
@@ -161,9 +162,9 @@ export function AuthModal({ isOpen, onClose, onLogin, onRegister, t }: AuthModal
             fill="none"
           >
             <path
-              d="M3 5 Q1 1 5 2 L95 3 Q99 1 98 6 L97 94 Q99 99 94 97 L6 96 Q1 99 2 94 Z"
+              d="M1 2 Q0 0 2 1 L98 1 Q100 0 99 2 L99 98 Q100 100 98 99 L2 99 Q0 100 1 98 Z"
               stroke="#2D2A26"
-              strokeWidth="0.8"
+              strokeWidth="0.6"
               fill="none"
               strokeLinecap="round"
             />

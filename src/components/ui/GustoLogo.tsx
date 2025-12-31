@@ -20,7 +20,7 @@ interface LogoProps {
   color?: string;
 }
 
-// Main logo: Egg with zigzag crack
+// Main logo: Egg with horizontal zigzag crack
 export const GustoLogo = ({ size = 48, color = tokens.colors.ink }: LogoProps) => (
   <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
     {/* Egg shape */}
@@ -33,9 +33,9 @@ export const GustoLogo = ({ size = 48, color = tokens.colors.ink }: LogoProps) =
       strokeWidth="1.5"
       fill="none"
     />
-    {/* Zigzag crack */}
+    {/* Diagonal zigzag crack pointing UP */}
     <path
-      d="M18 18 L22 23 L17 28 L23 33 L19 38"
+      d="M16 32 L20 28 L24 31 L28 27 L32 23"
       stroke={color}
       strokeWidth="1.3"
       strokeLinecap="round"
@@ -73,7 +73,7 @@ export const GustoLogoOutline = ({ size = 48, color = tokens.colors.paper }: Log
       fill="none"
     />
     <path
-      d="M18 18 L22 23 L17 28 L23 33 L19 38"
+      d="M16 32 L20 28 L24 31 L28 27 L32 23"
       stroke={color}
       strokeWidth="1.3"
       strokeLinecap="round"
@@ -108,8 +108,8 @@ export const GustoLogoAnimated = ({ size = 48, color = tokens.colors.ink }: Logo
           transform-origin: center;
         }
         .gusto-logo-animated path {
-          stroke-dasharray: 60;
-          stroke-dashoffset: 60;
+          stroke-dasharray: 40;
+          stroke-dashoffset: 40;
           animation: crackDraw 2s ease-out forwards;
         }
         @keyframes eggWiggle {
@@ -132,7 +132,7 @@ export const GustoLogoAnimated = ({ size = 48, color = tokens.colors.ink }: Logo
       fill="none"
     />
     <path
-      d="M18 18 L22 23 L17 28 L23 33 L19 38"
+      d="M16 32 L20 28 L24 31 L28 27 L32 23"
       stroke={color}
       strokeWidth="1.3"
       strokeLinecap="round"
@@ -238,10 +238,10 @@ export const SplashScreen = ({ onComplete, duration = 2500 }: SplashScreenProps)
               strokeWidth="2"
               fill={tokens.colors.paper}
             />
-            {/* Crack appears in phase 1 */}
+            {/* Diagonal crack appears in phase 1 - pointing UP */}
             {phase >= 1 && (
               <path
-                d="M55 70 L70 90 L50 110 L72 130 L58 150"
+                d="M45 120 L60 105 L75 115 L95 95 L115 75"
                 stroke={tokens.colors.ink}
                 strokeWidth="2"
                 strokeLinecap="round"
@@ -250,10 +250,10 @@ export const SplashScreen = ({ onComplete, duration = 2500 }: SplashScreenProps)
                 style={{ animation: 'fadeIn 0.3s ease-out' }}
               />
             )}
-            {/* More cracks in phase 2 */}
+            {/* Secondary diagonal crack in phase 2 - pointing UP */}
             {phase >= 2 && (
               <path
-                d="M105 65 L90 85 L110 105 L88 125 L102 145"
+                d="M50 135 L65 120 L80 130 L100 110 L118 90"
                 stroke={tokens.colors.ink}
                 strokeWidth="2"
                 strokeLinecap="round"

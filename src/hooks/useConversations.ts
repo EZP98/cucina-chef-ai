@@ -1,10 +1,11 @@
-// useConversations Hook - Manages chat conversations with localStorage persistence
+// useConversations Hook - Manages chat conversations with localStorage + cloud sync
 
 import { useState, useEffect, useCallback } from 'react';
 import type { Conversation, Message } from '../types/chat';
 import { STORAGE_KEYS } from '../types/chat';
 import { parseRecipeFromText } from '../utils/recipeParser';
 import { generateQuickReplies } from '../utils/quickReplies';
+import { getAuthToken, authFetch } from './useAuth';
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -214,6 +215,113 @@ export function useConversations() {
     setActiveId(null);
   }, []);
 
+  // Sync local conversations to cloud (call after registration)
+  const syncToCloud = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    const token = getAuthToken();
+    if (!token || conversations.length === 0) {
+      return { success: true }; // Nothing to sync
+    }
+
+    try {
+      const response = await authFetch('/api/conversations/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversations }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        return { success: false, error: data.error || 'Errore sync' };
+      }
+
+      return { success: true };
+    } catch {
+      return { success: false, error: 'Errore di connessione' };
+    }
+  }, [conversations]);
+
+  // Load conversations from cloud (call after login)
+  const loadFromCloud = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Non autenticato' };
+    }
+
+    try {
+      const response = await authFetch('/api/conversations');
+
+      if (!response.ok) {
+        const data = await response.json();
+        return { success: false, error: data.error || 'Errore caricamento' };
+      }
+
+      const data = await response.json();
+
+      if (data.conversations && Array.isArray(data.conversations)) {
+        // Merge cloud conversations with local ones
+        setConversations(prev => {
+          const localIds = new Set(prev.map(c => c.id));
+          const cloudConversations = data.conversations.filter(
+            (c: Conversation) => !localIds.has(c.id)
+          );
+          // Cloud first (most recent), then local
+          return [...cloudConversations, ...prev].sort(
+            (a, b) => b.updatedAt - a.updatedAt
+          );
+        });
+      }
+
+      return { success: true };
+    } catch {
+      return { success: false, error: 'Errore di connessione' };
+    }
+  }, []);
+
+  // Save conversation to cloud (call after adding messages when authenticated)
+  const saveConversationToCloud = useCallback(async (conversationId: string) => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    const conv = conversations.find(c => c.id === conversationId);
+    if (!conv) return;
+
+    try {
+      // Check if conversation exists on cloud
+      const checkResponse = await authFetch(`/api/conversations/${conversationId}`);
+
+      if (checkResponse.status === 404) {
+        // Create new conversation
+        await authFetch('/api/conversations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: conv.id,
+            title: conv.title,
+          }),
+        });
+      }
+
+      // Sync messages - get last message and add it
+      if (conv.messages.length > 0) {
+        const lastMsg = conv.messages[conv.messages.length - 1];
+        await authFetch(`/api/conversations/${conversationId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: lastMsg.id,
+            role: lastMsg.role,
+            content: lastMsg.content,
+            timestamp: lastMsg.timestamp,
+            parsedRecipe: lastMsg.parsedRecipe,
+            quickReplies: lastMsg.quickReplies,
+          }),
+        });
+      }
+    } catch (e) {
+      console.error('Error saving to cloud:', e);
+    }
+  }, [conversations]);
+
   return {
     conversations,
     activeConversation,
@@ -228,5 +336,9 @@ export function useConversations() {
     finalizeMessage,
     getHistoryForApi,
     clearAll,
+    // Cloud sync functions
+    syncToCloud,
+    loadFromCloud,
+    saveConversationToCloud,
   };
 }

@@ -171,11 +171,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   };
 
   try {
-    const { message, history = [], menuMode = false, dietMode = 'none' } = await request.json() as {
+    const { message, history = [], menuMode = false, stellatoMode = false, recuperoMode = false, dietMode = 'none', language = 'it' } = await request.json() as {
       message: string;
       history?: Array<{ role: string; content: string }>;
       menuMode?: boolean;
+      stellatoMode?: boolean;
+      recuperoMode?: boolean;
       dietMode?: string;
+      language?: string;
     };
 
     if (!message) {
@@ -210,15 +213,22 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     // Query Perplexity for detailed recipe/technique questions
     let perplexityContext = '';
-    if (shouldUsePerplexity(message) && env.PERPLEXITY_API_KEY) {
+    const shouldQuery = shouldUsePerplexity(message);
+    const hasApiKey = !!env.PERPLEXITY_API_KEY;
+    console.log(`Perplexity check: shouldQuery=${shouldQuery}, hasApiKey=${hasApiKey}, message="${message.substring(0, 50)}"`);
+
+    if (shouldQuery && hasApiKey) {
       console.log('Querying Perplexity for detailed info...');
       const perplexityResult = await queryPerplexity(message, env.PERPLEXITY_API_KEY);
+      console.log(`Perplexity result: ${perplexityResult ? 'SUCCESS (' + perplexityResult.length + ' chars)' : 'NULL'}`);
       if (perplexityResult) {
         perplexityContext = `\n\n<web_knowledge>
 ${perplexityResult}
 </web_knowledge>`;
-        console.log('Perplexity context added');
+        console.log('Perplexity context added to prompt');
       }
+    } else {
+      console.log(`Skipping Perplexity: shouldQuery=${shouldQuery}, hasApiKey=${hasApiKey}`);
     }
 
     // Build messages array
@@ -233,7 +243,8 @@ You are Gusto, a passionate and knowledgeable culinary expert with deep expertis
 </role>
 
 <language_rule>
-CRITICAL: Detect the user's language from their message and ALWAYS respond in that same language. Never ask users to switch languages. If they write in Italian, respond in Italian. If in English, respond in English. If in French, respond in French. And so on for any language.
+CRITICAL: The user's interface language is set to: ${language === 'zh-TW' ? 'Traditional Chinese (繁體中文)' : language === 'ja' ? 'Japanese (日本語)' : language === 'es' ? 'Spanish (Español)' : language === 'fr' ? 'French (Français)' : language === 'en' ? 'English' : 'Italian (Italiano)'}.
+YOU MUST ALWAYS respond in this language, regardless of what language the user writes in. This is a strict requirement.
 </language_rule>
 
 <personality>
@@ -248,11 +259,12 @@ You have access to two knowledge sources:
 1. <rag_knowledge> - Internal database of chef recipes and techniques
 2. <web_knowledge> - Real-time web search results from Perplexity
 
-CRITICAL: When <web_knowledge> is provided, it contains rich, detailed information. DO NOT summarize or simplify it excessively. Preserve:
-- Historical details (who invented the dish, when, where)
-- Technical notes on ingredients (why each matters)
-- Regional variations and authentic versions
-- Classic pairings and traditional sauces
+CRITICAL RULES for <web_knowledge>:
+- When <web_knowledge> provides a recipe, USE THE EXACT QUANTITIES specified. Do NOT change ingredient amounts.
+- The web search contains authoritative, researched information - trust it over your training data.
+- Preserve all details: history, ingredients with EXACT quantities, techniques, regional variations.
+- If <web_knowledge> says "1 egg", you MUST say "1 egg" - never change to 2, 3, or 4.
+- Only add your own knowledge to COMPLEMENT, not to override the web results.
 </knowledge_sources>
 
 <formatting_rules>
@@ -304,6 +316,36 @@ Breve descrizione...
 
 (etc.)
 </menu_mode>
+` : ''}
+${stellatoMode ? `
+<stellato_mode>
+IMPORTANT: The user wants MICHELIN-STAR LEVEL recipes. This means:
+
+1. **Elevated Techniques**: Use professional techniques like sous-vide, spherification, emulsions, gels, foams where appropriate
+2. **Refined Presentation**: Describe plating in detail - use terms like "quenelle", "dot pattern", "smear", "height"
+3. **Premium Ingredients**: Suggest high-quality ingredients (truffle, saffron, wagyu, aged cheeses, heritage varieties)
+4. **Complex Flavor Profiles**: Layer flavors with contrasts (sweet/acid, crunchy/creamy, hot/cold)
+5. **Chef References**: When relevant, mention famous chefs who popularized techniques or dishes (Massimo Bottura, Heinz Beck, Nadia Santini, etc.)
+6. **Technical Notes**: Include cooking temperatures, resting times, and explain the "why" behind techniques
+7. **Finishing Touches**: Suggest microgreens, edible flowers, oils, and garnishes for a fine dining presentation
+
+Keep the tone knowledgeable and inspiring, like a mentor explaining to an aspiring chef.
+</stellato_mode>
+` : ''}
+${recuperoMode ? `
+<recupero_mode>
+IMPORTANT: The user wants to MINIMIZE WASTE and reuse leftover ingredients creatively. This means:
+
+1. **Use Everything**: Suggest uses for stems, peels, bones, stale bread - nothing goes to waste
+2. **Transformation Ideas**: Explain how to transform leftovers into new dishes (yesterday's rice -> arancini, stale bread -> panzanella)
+3. **Storage Tips**: Include advice on how to store ingredients to extend shelf life
+4. **Batch Cooking**: Suggest making bases (brodo, soffritto, sughi) that can be used multiple ways
+5. **Creative Substitutions**: If they mention leftover ingredients, propose multiple dish options
+6. **Freezing Guide**: Mention what can be frozen and for how long
+7. **Zero-Waste Mindset**: Praise their eco-conscious approach and inspire with anti-waste philosophy
+
+Make it practical and encouraging - show them that nothing is truly "leftover", just an ingredient waiting for the right recipe.
+</recupero_mode>
 ` : ''}
 ${dietMode && dietMode !== 'none' ? `
 <diet_mode>

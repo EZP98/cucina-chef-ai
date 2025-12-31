@@ -17,6 +17,7 @@ export const tokens = {
     inkFaded: '#C4C0B9',
     paper: '#FAF7F2',
     paperDark: '#E8E4DE',
+    cream: '#F5F1EA',
     white: '#FFFFFF',
   },
   fonts: {
@@ -119,7 +120,7 @@ export const SketchBox: React.FC<BoxProps> = ({ children, style = {} }) => (
 
 // Box tratteggiato
 export const DashedBox: React.FC<BoxProps> = ({ children, style = {} }) => (
-  <div style={{ border: `1.5px dashed ${tokens.colors.inkFaded}`, borderRadius: 4, padding: 14, ...style }}>
+  <div style={{ border: `1.5px dashed ${tokens.colors.inkFaded}`, borderRadius: 4, padding: 14, overflow: 'hidden', ...style }}>
     {children}
   </div>
 );
@@ -884,18 +885,83 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   </div>
 );
 
+interface RecipeInChatProps extends Omit<RecipeDetailProps, 'checkedIngredients' | 'onIngredientToggle'> {
+  onSave?: () => void;
+  isSaved?: boolean;
+  isSaving?: boolean;
+}
+
 /**
  * Ricetta inline nella chat (versione espansa)
  * Mostra ricetta completa dentro la conversazione
  * Senza cornice pesante - solo separatori leggeri
+ * Include bottone per salvare nel ricettario
  */
-export const RecipeInChat: React.FC<Omit<RecipeDetailProps, 'checkedIngredients' | 'onIngredientToggle'>> = (props) => (
+export const RecipeInChat: React.FC<RecipeInChatProps> = ({
+  onSave,
+  isSaved = false,
+  isSaving = false,
+  ...props
+}) => (
   <div style={{
     marginBottom: 24,
     paddingTop: 8,
     paddingBottom: 8,
   }}>
     <RecipeDetail {...props} />
+
+    {/* Save to cookbook button */}
+    {onSave && (
+      <button
+        onClick={onSave}
+        disabled={isSaved || isSaving}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          width: '100%',
+          marginTop: 16,
+          padding: '10px 16px',
+          background: isSaved ? '#F0EBE3' : 'transparent',
+          color: isSaved ? '#8B857C' : '#2D2A26',
+          border: isSaved ? 'none' : '1.5px dashed #C4C0B9',
+          borderRadius: 8,
+          fontFamily: "'Caveat', cursive",
+          fontSize: 17,
+          cursor: isSaved || isSaving ? 'default' : 'pointer',
+          transition: 'all 0.15s',
+        }}
+      >
+        {isSaving ? (
+          <>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ animation: 'spin 1s linear infinite' }}>
+              <circle cx="8" cy="8" r="6" stroke="#8B857C" strokeWidth="2" strokeDasharray="20 10" />
+            </svg>
+            Salvo...
+          </>
+        ) : isSaved ? (
+          <>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M3 8L6 11L13 4" stroke="#8B857C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Salvata nel ricettario
+          </>
+        ) : (
+          <>
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+              <path
+                d="M10 17 Q4 12 4 8 Q4 4 7 4 Q9 4 10 6 Q11 4 13 4 Q16 4 16 8 Q16 12 10 17"
+                stroke="#2D2A26"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+            Salva nel ricettario
+          </>
+        )}
+      </button>
+    )}
   </div>
 );
 

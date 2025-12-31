@@ -5,7 +5,6 @@ import {
   ZineRecipeCard,
   ZineNoteCard,
   ZinePhotoCard,
-  HandDrawnFrame,
   Underline,
   SketchHeart
 } from './components/ui/ZineUI';
@@ -13,7 +12,6 @@ import { GustoLogo } from './components/ui/GustoLogo';
 import {
   UserMessage,
   AIMessage,
-  LoadingDots,
   DashedBox,
   QuickReply,
   QuickReplies,
@@ -23,6 +21,12 @@ import {
   tokens
 } from './components/ui/ChatComponents';
 import { useConversations } from './hooks/useConversations';
+import { useAuth } from './hooks/useAuth';
+import { useRecipes } from './hooks/useRecipes';
+import { AuthModal } from './components/auth/AuthModal';
+import { UserMenu, LoginButton } from './components/auth/UserMenu';
+import { useI18nStandalone } from './hooks/useI18n';
+import { LanguageSelector } from './components/ui/LanguageSelector';
 import { getInitialQuickReplies } from './utils/quickReplies';
 import { extractIntroText } from './utils/recipeParser';
 import {
@@ -93,14 +97,6 @@ const CameraIcon = () => (
 // Types
 type Screen = 'home' | 'chat' | 'recipes' | 'pantry';
 
-interface Recipe {
-  id: number;
-  name: string;
-  note: string;
-  time: string;
-  Illustration: React.ComponentType<{ size?: number }>;
-}
-
 interface PantryItem {
   name: string;
   qty: string;
@@ -132,9 +128,28 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [favorites, setFavorites] = useState<number[]>([0, 2]);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  // Conversations hook with localStorage persistence
+  // Auth hook
+  const { user, token, isAuthenticated, login, register, logout } = useAuth();
+
+  // Recipes hook
+  const {
+    recipes: savedRecipes,
+    favorites: favoriteRecipes,
+    saveRecipe,
+    deleteRecipe,
+    toggleFavorite: toggleRecipeFavorite,
+    isRecipeSaved,
+  } = useRecipes(token);
+
+  // State for tracking which recipe is being saved
+  const [savingRecipeId, setSavingRecipeId] = useState<string | null>(null);
+
+  // i18n hook
+  const { language, setLanguage, t, languageNames, availableLanguages } = useI18nStandalone();
+
+  // Conversations hook with localStorage persistence + cloud sync
   const {
     conversations,
     activeId,
@@ -146,7 +161,28 @@ export default function App() {
     updateMessageContent,
     finalizeMessage,
     getHistoryForApi,
+    syncToCloud,
+    loadFromCloud,
+    saveConversationToCloud,
   } = useConversations();
+
+  // Wrap login to load conversations from cloud after success
+  const handleLogin = async (email: string, password: string) => {
+    const result = await login(email, password);
+    if (result.success) {
+      await loadFromCloud();
+    }
+    return result;
+  };
+
+  // Wrap register to sync local conversations to cloud after success
+  const handleRegister = async (email: string, password: string, name?: string) => {
+    const result = await register(email, password, name);
+    if (result.success) {
+      await syncToCloud();
+    }
+    return result;
+  };
   const [shoppingList, setShoppingList] = useState<ShoppingItem[]>([
     { text: 'comprare uova', checked: true },
     { text: 'prendere il basilico', checked: true },
@@ -154,44 +190,29 @@ export default function App() {
     { text: 'mozzarella fresca', checked: false },
   ]);
 
-  const recipes: Recipe[] = [
-    { id: 0, name: 'Uova in Purgatorio', note: 'comfort food della domenica', time: '15 min', Illustration: SketchEgg },
-    { id: 1, name: 'Pasta al Pomodoro', note: 'la semplicità che vince', time: '20 min', Illustration: SketchPasta },
-    { id: 2, name: 'Buddha Bowl', note: 'un arcobaleno di sapori', time: '25 min', Illustration: SketchBowl },
-    { id: 3, name: 'Toast Avocado', note: 'colazione healthy', time: '10 min', Illustration: SketchAvocado },
-    { id: 4, name: 'Bruschetta', note: 'antipasto classico', time: '15 min', Illustration: SketchTomato },
-  ];
 
-  const [pantryItems, setPantryItems] = useState<PantryItem[]>([
-    { name: 'Uova', qty: '6', Illustration: SketchEgg, expiring: false },
-    { name: 'Latte', qty: '1L', Illustration: SketchMilk, expiring: true },
-    { name: 'Pomodori', qty: '4', Illustration: SketchTomato, expiring: false },
-    { name: 'Formaggio', qty: '200g', Illustration: SketchCheese, expiring: false },
-    { name: 'Carote', qty: '3', Illustration: SketchCarrot, expiring: false },
-    { name: 'Basilico', qty: '1 mazzo', Illustration: SketchBasil, expiring: true },
-    { name: 'Avocado', qty: '2', Illustration: SketchAvocado, expiring: true },
-    { name: 'Pane', qty: '1', Illustration: SketchBread, expiring: true },
-  ]);
+  // Pantry starts empty - populated by AI photo analysis
+  const [pantryItems, setPantryItems] = useState<PantryItem[]>([]);
 
   const [isAnalyzingPhoto, setIsAnalyzingPhoto] = useState(false);
   const [menuMode, setMenuMode] = useState(false);
+  const [stellatoMode, setStellatoMode] = useState(false);
+  const [recuperoMode, setRecuperoMode] = useState(false);
   const [dietMode, setDietMode] = useState<string>('none');
   const [dietDropdownOpen, setDietDropdownOpen] = useState(false);
 
+  // Diet options with translations
   const dietOptions = [
-    { value: 'none', label: 'Nessuna dieta' },
-    { value: 'lowcarb', label: 'Low carb' },
-    { value: 'keto', label: 'Keto' },
-    { value: 'vegetarian', label: 'Vegetariano' },
-    { value: 'vegan', label: 'Vegano' },
-    { value: 'glutenfree', label: 'Senza glutine' },
-    { value: 'lactosefree', label: 'Senza lattosio' },
-    { value: 'highprotein', label: 'Proteico' },
+    { value: 'none', label: t('diet.none') },
+    { value: 'lowcarb', label: t('diet.lowcarb') },
+    { value: 'keto', label: t('diet.keto') },
+    { value: 'vegetarian', label: t('diet.vegetarian') },
+    { value: 'vegan', label: t('diet.vegan') },
+    { value: 'glutenfree', label: t('diet.glutenfree') },
+    { value: 'lactosefree', label: t('diet.lactosefree') },
+    { value: 'highprotein', label: t('diet.highprotein') },
   ];
 
-  const toggleFavorite = (id: number) => {
-    setFavorites(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  };
 
   const toggleShoppingItem = (index: number) => {
     setShoppingList(prev => prev.map((item, i) =>
@@ -219,6 +240,12 @@ export default function App() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Require authentication to use pantry AI
+    if (!isAuthenticated) {
+      setAuthModalOpen(true);
+      return;
+    }
+
     setIsAnalyzingPhoto(true);
 
     try {
@@ -239,7 +266,7 @@ export default function App() {
         const data = await response.json();
 
         if (data.ingredients && Array.isArray(data.ingredients)) {
-          // Add new ingredients to pantry
+          // Replace pantry with new ingredients from photo
           const newItems: PantryItem[] = data.ingredients.map((ing: { name: string; qty: string }) => ({
             name: ing.name,
             qty: ing.qty || '?',
@@ -247,15 +274,30 @@ export default function App() {
             expiring: false,
           }));
 
-          setPantryItems(prev => {
-            // Avoid duplicates by name
-            const existingNames = new Set(prev.map(p => p.name.toLowerCase()));
-            const unique = newItems.filter(item => !existingNames.has(item.name.toLowerCase()));
-            return [...prev, ...unique];
-          });
-        }
+          setPantryItems(newItems);
+          setIsAnalyzingPhoto(false);
 
-        setIsAnalyzingPhoto(false);
+          // Automatically ask AI to suggest dishes based on found ingredients
+          if (newItems.length > 0) {
+            const ingredientsList = newItems.map(i => `${i.name} (${i.qty})`).join(', ');
+            const suggestionMessage = language === 'it'
+              ? `Ho questi ingredienti nella dispensa: ${ingredientsList}. Cosa posso cucinare?`
+              : language === 'en'
+              ? `I have these ingredients in my pantry: ${ingredientsList}. What can I cook?`
+              : language === 'fr'
+              ? `J'ai ces ingrédients dans mon garde-manger: ${ingredientsList}. Que puis-je cuisiner?`
+              : language === 'es'
+              ? `Tengo estos ingredientes en mi despensa: ${ingredientsList}. ¿Qué puedo cocinar?`
+              : language === 'ja'
+              ? `食料庫にこれらの材料があります: ${ingredientsList}。何が作れますか?`
+              : `我的食品儲藏室裡有這些食材：${ingredientsList}。我可以煮什麼？`;
+
+            // Send message to chat (this will navigate to chat screen)
+            sendMessage(suggestionMessage);
+          }
+        } else {
+          setIsAnalyzingPhoto(false);
+        }
       };
 
       reader.readAsDataURL(file);
@@ -268,6 +310,12 @@ export default function App() {
   const sendMessage = async (customMessage?: string) => {
     const msgToSend = customMessage || message.trim();
     if (!msgToSend || isLoading) return;
+
+    // Require authentication to send messages
+    if (!isAuthenticated) {
+      setAuthModalOpen(true);
+      return;
+    }
 
     // Create new conversation if none active
     let convId = activeId;
@@ -293,7 +341,10 @@ export default function App() {
           message: msgToSend,
           history: getHistoryForApi(),
           menuMode: menuMode,
-          dietMode: dietMode
+          stellatoMode: stellatoMode,
+          recuperoMode: recuperoMode,
+          dietMode: dietMode,
+          language: language
         }),
       });
 
@@ -376,6 +427,11 @@ export default function App() {
         // Fallback if no text received
         updateMessageContent(aiMsgId, 'Mi dispiace, non ho ricevuto risposta.', convId);
       }
+
+      // Save to cloud if authenticated
+      if (token) {
+        saveConversationToCloud(convId);
+      }
     } catch (error) {
       console.error('Chat error:', error);
       updateMessageContent(aiMsgId, 'Mi dispiace, c\'è stato un problema. Riprova tra poco!', convId);
@@ -396,9 +452,9 @@ export default function App() {
   };
 
   const navItems = [
-    { id: 'chat' as Screen, label: 'Chat', Icon: NavChat },
-    { id: 'recipes' as Screen, label: 'Ricette', Icon: NavBook },
-    { id: 'pantry' as Screen, label: 'Dispensa', Icon: NavPantry },
+    { id: 'chat' as Screen, label: t('nav.chat'), Icon: NavChat },
+    { id: 'recipes' as Screen, label: t('nav.recipes'), Icon: NavBook },
+    { id: 'pantry' as Screen, label: t('nav.pantry'), Icon: NavPantry },
   ];
 
   return (
@@ -480,8 +536,24 @@ export default function App() {
           ))}
 
           <div style={{ marginTop: 'auto', paddingTop: 24, borderTop: '1px solid #E8E4DE' }}>
+            {/* User Section */}
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
+              {isAuthenticated && user ? (
+                <UserMenu user={user} onLogout={logout} t={t} />
+              ) : (
+                <LoginButton onClick={() => setAuthModalOpen(true)} t={t} />
+              )}
+            </div>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
+              <LanguageSelector
+                currentLanguage={language}
+                languages={availableLanguages}
+                languageNames={languageNames}
+                onSelect={setLanguage}
+              />
+            </div>
             <ZineText size="xs" style={{ color: '#A8A4A0', display: 'block', textAlign: 'center' }}>
-              powered by AI
+              {t('misc.poweredByAi')}
             </ZineText>
           </div>
         </aside>
@@ -503,17 +575,19 @@ export default function App() {
               zIndex: 200
             }}
           />
-          {/* Menu Panel */}
+          {/* Menu Panel - Fullscreen on mobile */}
           <div style={{
             position: 'fixed',
             top: 0,
+            left: 0,
             right: 0,
             bottom: 0,
-            width: 260,
+            width: '100%',
             background: '#FAF7F2',
             zIndex: 201,
             padding: '24px',
-            boxShadow: '-4px 0 20px rgba(0,0,0,0.1)'
+            display: 'flex',
+            flexDirection: 'column',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
               <ZineText size="lg">Menu</ZineText>
@@ -548,10 +622,26 @@ export default function App() {
               </button>
             ))}
 
-            <div style={{ marginTop: 'auto', position: 'absolute', bottom: 32, left: 24, right: 24 }}>
+            <div style={{ marginTop: 'auto', paddingTop: 24 }}>
               <div style={{ borderTop: '1px solid #E8E4DE', paddingTop: 16 }}>
+                {/* User Section */}
+                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
+                  {isAuthenticated && user ? (
+                    <UserMenu user={user} onLogout={logout} t={t} />
+                  ) : (
+                    <LoginButton onClick={() => setAuthModalOpen(true)} t={t} />
+                  )}
+                </div>
+                <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
+                  <LanguageSelector
+                    currentLanguage={language}
+                    languages={availableLanguages}
+                    languageNames={languageNames}
+                    onSelect={setLanguage}
+                  />
+                </div>
                 <ZineText size="xs" style={{ color: '#A8A4A0', display: 'block', textAlign: 'center' }}>
-                  Gusto - powered by AI
+                  Gusto - {t('misc.poweredByAi')}
                 </ZineText>
               </div>
             </div>
@@ -591,10 +681,10 @@ export default function App() {
               <>
                 <div>
                   <ZineText size="xl" style={{ display: 'block' }}>
-                    {screen === 'home' && 'Cosa cuciniamo?'}
-                    {screen === 'chat' && 'Chat con Gusto'}
-                    {screen === 'recipes' && 'Le tue ricette'}
-                    {screen === 'pantry' && 'La tua dispensa'}
+                    {screen === 'home' && t('header.home')}
+                    {screen === 'chat' && t('header.chat')}
+                    {screen === 'recipes' && t('header.recipes')}
+                    {screen === 'pantry' && t('header.pantry')}
                   </ZineText>
                   <Underline width={screen === 'home' ? 170 : screen === 'chat' ? 150 : 130} />
                 </div>
@@ -614,40 +704,291 @@ export default function App() {
         {/* ============ HOME ============ */}
         {screen === 'home' && (
           <div style={{ maxWidth: 600, margin: '0 auto' }}>
-            {/* Chat Input - Dashed Box Style */}
-            <div style={{
-              border: '1.5px dashed #C4C0B9',
-              borderRadius: 2,
-              padding: 20,
-              marginBottom: 28,
-              background: 'white'
+            {/* Chat Input - Same as Chat page */}
+            <DashedBox style={{
+              background: tokens.colors.white,
+              flexDirection: 'column',
+              gap: 12,
+              marginBottom: 28
             }}>
-              <ZineText size="md" style={{ color: '#8B857C', display: 'block', marginBottom: 16 }}>
-                Dimmi cosa hai voglia di mangiare, cosa c'è nel frigo, o chiedi un consiglio...
-              </ZineText>
-
+              {/* Options Row - Menu Mode + Skills + Diet */}
               <div style={{
-                borderTop: '1px solid #C4C0B9',
-                paddingTop: 16,
                 display: 'flex',
-                justifyContent: 'space-between',
                 alignItems: 'center',
-                gap: 12
+                justifyContent: 'space-between',
+                gap: 16,
+                paddingBottom: 14,
+                marginBottom: 4,
+                borderBottom: '1px dashed #E8E4DE',
+                flexWrap: 'wrap'
               }}>
+                {/* Left side: Mode + Skills */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                  {/* Menu Mode Toggle - Radio Style */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <button
+                      onClick={() => setMenuMode(false)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+                        <circle cx="9" cy="9" r="7" stroke="#2D2A26" strokeWidth="1.5" fill="none"/>
+                        {!menuMode && <circle cx="9" cy="9" r="4" fill="#2D2A26"/>}
+                      </svg>
+                      <ZineText size="sm" style={{ color: !menuMode ? '#2D2A26' : '#A8A4A0' }}>
+                        {t('chat.dish')}
+                      </ZineText>
+                    </button>
+                    <button
+                      onClick={() => setMenuMode(true)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+                        <circle cx="9" cy="9" r="7" stroke="#2D2A26" strokeWidth="1.5" fill="none"/>
+                        {menuMode && <circle cx="9" cy="9" r="4" fill="#2D2A26"/>}
+                      </svg>
+                      <ZineText size="sm" style={{ color: menuMode ? '#2D2A26' : '#A8A4A0' }}>
+                        {t('chat.menu')}
+                      </ZineText>
+                    </button>
+                  </div>
+
+                  {/* Skill Pills - Toggle Style */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {/* Stellato Pill */}
+                    <button
+                      onClick={() => setStellatoMode(!stellatoMode)}
+                      title={t('skill.stellatoDesc')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '5px 12px',
+                        border: stellatoMode ? '1.5px solid #2D2A26' : '1.5px dashed #C4C0B9',
+                        borderRadius: 16,
+                        background: stellatoMode ? '#2D2A26' : 'transparent',
+                        cursor: 'pointer',
+                        fontFamily: "'Caveat', cursive",
+                        fontSize: 15,
+                        color: stellatoMode ? '#FAF7F2' : '#8B857C',
+                        transition: 'all 0.15s',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <path d="M8 1L9.5 5.5L14 6L10.5 9.5L12 14L8 11L4 14L5.5 9.5L2 6L6.5 5.5Z"
+                          stroke={stellatoMode ? '#FAF7F2' : '#8B857C'}
+                          strokeWidth="1.2"
+                          fill={stellatoMode ? '#FAF7F2' : 'none'}
+                          strokeLinejoin="round"/>
+                      </svg>
+                      {t('skill.stellato')}
+                    </button>
+
+                    {/* Recupero Pill */}
+                    <button
+                      onClick={() => setRecuperoMode(!recuperoMode)}
+                      title={t('skill.recuperoDesc')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '5px 12px',
+                        border: recuperoMode ? '1.5px solid #2D2A26' : '1.5px dashed #C4C0B9',
+                        borderRadius: 16,
+                        background: recuperoMode ? '#2D2A26' : 'transparent',
+                        cursor: 'pointer',
+                        fontFamily: "'Caveat', cursive",
+                        fontSize: 15,
+                        color: recuperoMode ? '#FAF7F2' : '#8B857C',
+                        transition: 'all 0.15s',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 8C2 4.7 4.7 2 8 2C10.2 2 12.1 3.2 13.2 5"
+                          stroke={recuperoMode ? '#FAF7F2' : '#8B857C'}
+                          strokeWidth="1.2"
+                          strokeLinecap="round"/>
+                        <path d="M14 8C14 11.3 11.3 14 8 14C5.8 14 3.9 12.8 2.8 11"
+                          stroke={recuperoMode ? '#FAF7F2' : '#8B857C'}
+                          strokeWidth="1.2"
+                          strokeLinecap="round"/>
+                        <path d="M13 2V5.5H9.5" stroke={recuperoMode ? '#FAF7F2' : '#8B857C'} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M3 14V10.5H6.5" stroke={recuperoMode ? '#FAF7F2' : '#8B857C'} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      {t('skill.recupero')}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Diet Dropdown - Custom hand-drawn */}
+                <div style={{ position: 'relative' }}>
+                  {/* Dropdown Panel - Opens Downward on home */}
+                  {dietDropdownOpen && (
+                    <>
+                      {/* Backdrop to close */}
+                      <div
+                        onClick={() => setDietDropdownOpen(false)}
+                        style={{
+                          position: 'fixed',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          zIndex: 99
+                        }}
+                      />
+                      {/* Options Panel */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        right: 0,
+                        marginTop: 8,
+                        minWidth: 150,
+                        zIndex: 100,
+                        background: '#FFFFFF',
+                        borderRadius: 4
+                      }}>
+                        {/* Hand-drawn frame with fill */}
+                        <svg
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%'
+                          }}
+                          viewBox="0 0 150 280"
+                          preserveAspectRatio="none"
+                          fill="none"
+                        >
+                          <path
+                            d="M6 10 Q3 4 10 4 L140 6 Q147 4 146 12 L144 268 Q146 276 138 274 L12 272 Q4 274 6 266 Z"
+                            stroke="#2D2A26"
+                            strokeWidth="1.5"
+                            fill="#FFFFFF"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                        {/* Options */}
+                        <div style={{ position: 'relative', zIndex: 1, padding: '10px 6px' }}>
+                          {dietOptions.map((opt) => (
+                            <button
+                              key={opt.value}
+                              onClick={() => {
+                                setDietMode(opt.value);
+                                setDietDropdownOpen(false);
+                              }}
+                              style={{
+                                display: 'block',
+                                width: '100%',
+                                textAlign: 'left',
+                                background: 'transparent',
+                                border: 'none',
+                                padding: '8px 12px',
+                                fontFamily: "'Caveat', cursive",
+                                fontSize: 16,
+                                color: dietMode === opt.value ? '#2D2A26' : '#A8A4A0',
+                                fontWeight: dietMode === opt.value ? 600 : 400,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Trigger Button */}
+                  <button
+                    onClick={() => setDietDropdownOpen(!dietDropdownOpen)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      position: 'relative'
+                    }}
+                  >
+                    {/* Hand-drawn frame around button */}
+                    <svg
+                      style={{
+                        position: 'absolute',
+                        top: -4,
+                        left: -6,
+                        width: 'calc(100% + 12px)',
+                        height: 'calc(100% + 8px)',
+                        pointerEvents: 'none'
+                      }}
+                      viewBox="0 0 100 28"
+                      preserveAspectRatio="none"
+                      fill="none"
+                    >
+                      <path
+                        d="M3 5 Q1 2 5 2 L93 3 Q98 2 97 7 L96 21 Q98 26 93 25 L7 24 Q2 25 3 20 Z"
+                        stroke="#2D2A26"
+                        strokeWidth="1.2"
+                        fill="none"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <ZineText size="sm" style={{
+                      color: dietMode === 'none' ? '#A8A4A0' : '#2D2A26',
+                      padding: '2px 4px'
+                    }}>
+                      {dietOptions.find(o => o.value === dietMode)?.label}
+                    </ZineText>
+                    {/* Arrow */}
+                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none" style={{ marginRight: 2 }}>
+                      <path
+                        d={dietDropdownOpen ? "M3 8 L6 4 L9 8" : "M3 4 L6 8 L9 4"}
+                        stroke="#2D2A26"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Input Row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <input
                   type="text"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                  placeholder='es: "ho delle uova e pomodori"'
+                  placeholder={menuMode ? t('chat.menuPlaceholder') : t('chat.inputPlaceholder')}
                   disabled={isLoading}
                   style={{
                     flex: 1,
                     border: 'none',
                     background: 'transparent',
-                    fontFamily: "'Caveat', cursive",
+                    fontFamily: tokens.fonts.hand,
                     fontSize: 18,
-                    color: '#2D2A26',
+                    color: tokens.colors.ink,
                     outline: 'none'
                   }}
                 />
@@ -655,12 +996,12 @@ export default function App() {
                   onClick={() => sendMessage()}
                   disabled={isLoading}
                   style={{
-                    background: isLoading ? '#8B857C' : '#2D2A26',
-                    color: '#FAF7F2',
+                    background: isLoading ? tokens.colors.inkLight : tokens.colors.ink,
+                    color: tokens.colors.paper,
                     border: 'none',
                     borderRadius: 20,
                     padding: '10px 20px',
-                    fontFamily: "'Caveat', cursive",
+                    fontFamily: tokens.fonts.hand,
                     fontSize: 16,
                     cursor: isLoading ? 'wait' : 'pointer',
                     display: 'flex',
@@ -669,38 +1010,55 @@ export default function App() {
                     flexShrink: 0
                   }}
                 >
-                  {isLoading ? 'Penso...' : 'Chiedi'} <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ marginLeft: 4 }}><path d="M8 1 L8 15 M1 8 L15 8 M3 3 L13 13 M13 3 L3 13" stroke="#FAF7F2" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                  {isLoading ? t('chat.thinking') : t('chat.send')} <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ marginLeft: 4 }}><path d="M8 1 L8 15 M1 8 L15 8 M3 3 L13 13 M13 3 L3 13" stroke="#FAF7F2" strokeWidth="1.2" strokeLinecap="round"/></svg>
                 </button>
               </div>
-            </div>
+            </DashedBox>
 
-            {/* Suggeriti */}
-            <ZineText size="lg" underline style={{ display: 'block', marginBottom: 20 }}>
-              suggeriti per te
-            </ZineText>
-
-            {recipes.slice(0, 3).map(r => (
-              <ZineRecipeCard
-                key={r.id}
-                title={r.name}
-                note={r.note}
-                time={r.time}
-                Illustration={r.Illustration}
-                annotations={favorites.includes(r.id) ? ['preferita'] : []}
-              />
-            ))}
-
-            {/* In scadenza */}
-            <ZineNoteCard highlight="in scadenza!" style={{ marginTop: 8, background: '#FFFBF0' }}>
-              <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginTop: 12 }}>
-                {pantryItems.filter(i => i.expiring).map(item => (
-                  <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <item.Illustration size={36} />
-                    <ZineText size="sm">{item.name}</ZineText>
-                  </div>
+            {/* Suggeriti - Show saved recipes or hint to explore */}
+            {savedRecipes.length > 0 ? (
+              <>
+                <ZineText size="lg" underline style={{ display: 'block', marginBottom: 20 }}>
+                  {t('home.suggested')}
+                </ZineText>
+                {savedRecipes.slice(0, 3).map(r => (
+                  <ZineRecipeCard
+                    key={r.id}
+                    title={r.name}
+                    note={r.note || ''}
+                    time={r.time || ''}
+                    Illustration={SketchBowl}
+                    annotations={r.isFavorite ? [t('misc.favorite')] : []}
+                  />
                 ))}
+              </>
+            ) : (
+              <div style={{
+                border: '1.5px dashed #C4C0B9',
+                borderRadius: 8,
+                padding: 24,
+                textAlign: 'center',
+                marginBottom: 20
+              }}>
+                <ZineText size="md" style={{ color: '#8B857C' }}>
+                  {t('recipes.emptyHint') || 'Chiedi una ricetta in chat e salvala qui'}
+                </ZineText>
               </div>
-            </ZineNoteCard>
+            )}
+
+            {/* In scadenza - Only show if there are expiring items */}
+            {pantryItems.filter(i => i.expiring).length > 0 && (
+              <ZineNoteCard highlight={t('home.expiring')} style={{ marginTop: 8, background: '#FFFBF0' }}>
+                <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginTop: 12 }}>
+                  {pantryItems.filter(i => i.expiring).map(item => (
+                    <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <item.Illustration size={36} />
+                      <ZineText size="sm">{item.name}</ZineText>
+                    </div>
+                  ))}
+                </div>
+              </ZineNoteCard>
+            )}
           </div>
         )}
 
@@ -711,8 +1069,177 @@ export default function App() {
             margin: '0 auto',
             paddingBottom: 100
           }}>
-            {/* Chat Messages */}
+            {/* Show conversation list when no active conversation */}
+            {!activeId ? (
+              <div style={{ padding: '20px 0' }}>
+                {/* New Chat Button */}
+                <button
+                  onClick={() => {
+                    createConversation();
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '16px 20px',
+                    marginBottom: 24,
+                    background: tokens.colors.cream,
+                    border: `2px dashed ${tokens.colors.inkFaded}`,
+                    borderRadius: 12,
+                    fontFamily: tokens.fonts.hand,
+                    fontSize: 18,
+                    color: tokens.colors.ink,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = tokens.colors.paper;
+                    e.currentTarget.style.borderColor = tokens.colors.ink;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = tokens.colors.cream;
+                    e.currentTarget.style.borderColor = tokens.colors.inkFaded;
+                  }}
+                >
+                  <span style={{ fontSize: 22 }}>+</span>
+                  {t('chat.newChat')}
+                </button>
+
+                {/* Conversation List */}
+                {conversations.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                    <svg width="60" height="60" viewBox="0 0 60 60" fill="none" style={{ marginBottom: 16, opacity: 0.5 }}>
+                      <path d="M10 15Q10 10 15 10H45Q50 10 50 15V35Q50 40 45 40H25L10 50V15Z" stroke={tokens.colors.inkFaded} strokeWidth="2" strokeLinecap="round"/>
+                      <path d="M20 22H40M20 30H32" stroke={tokens.colors.inkFaded} strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                    <p style={{
+                      fontFamily: tokens.fonts.hand,
+                      fontSize: 18,
+                      color: tokens.colors.inkFaded,
+                      marginBottom: 8
+                    }}>
+                      {t('chat.noConversations')}
+                    </p>
+                    <p style={{
+                      fontFamily: tokens.fonts.hand,
+                      fontSize: 15,
+                      color: tokens.colors.inkFaded,
+                      opacity: 0.7
+                    }}>
+                      {t('chat.startFirst')}
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <p style={{
+                      fontFamily: tokens.fonts.hand,
+                      fontSize: 14,
+                      color: tokens.colors.inkFaded,
+                      marginBottom: 12,
+                      textTransform: 'uppercase',
+                      letterSpacing: 1
+                    }}>
+                      {t('chat.recentChats')}
+                    </p>
+                    {conversations.map((conv) => (
+                      <div
+                        key={conv.id}
+                        onClick={() => setActiveConversation(conv.id)}
+                        style={{
+                          padding: '14px 16px',
+                          marginBottom: 8,
+                          background: tokens.colors.paper,
+                          borderRadius: 10,
+                          cursor: 'pointer',
+                          border: `1px solid ${tokens.colors.inkFaded}20`,
+                          transition: 'all 0.15s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = tokens.colors.cream;
+                          e.currentTarget.style.transform = 'translateX(4px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = tokens.colors.paper;
+                          e.currentTarget.style.transform = 'translateX(0)';
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{
+                            fontFamily: tokens.fonts.hand,
+                            fontSize: 16,
+                            color: tokens.colors.ink,
+                            margin: 0,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {conv.title}
+                          </p>
+                          <p style={{
+                            fontFamily: tokens.fonts.hand,
+                            fontSize: 13,
+                            color: tokens.colors.inkFaded,
+                            margin: '4px 0 0 0'
+                          }}>
+                            {conv.messages.length} {conv.messages.length === 1 ? 'messaggio' : 'messaggi'}
+                          </p>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteConversation(conv.id);
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: 6,
+                            cursor: 'pointer',
+                            opacity: 0.4,
+                            transition: 'opacity 0.15s'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                          onMouseLeave={(e) => e.currentTarget.style.opacity = '0.4'}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M4 4L12 12M12 4L4 12" stroke={tokens.colors.inkFaded} strokeWidth="1.5" strokeLinecap="round"/>
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+            /* Active Chat View */
             <div style={{ flex: 1 }}>
+              {/* Back button */}
+              <button
+                onClick={() => setActiveConversation(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: '8px 0',
+                  marginBottom: 12,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontFamily: tokens.fonts.hand,
+                  fontSize: 15,
+                  color: tokens.colors.inkLight,
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M10 4L6 8L10 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                {t('chat.allChats')}
+              </button>
+
               {messages.length === 0 && !isLoading ? (
                 <div style={{ textAlign: 'center', padding: '60px 20px' }}>
                   <p style={{
@@ -721,7 +1248,7 @@ export default function App() {
                     color: tokens.colors.inkLight,
                     marginBottom: 12
                   }}>
-                    Inizia una conversazione!
+                    {t('chat.startConversation')}
                   </p>
                   <p style={{
                     fontFamily: tokens.fonts.hand,
@@ -729,7 +1256,7 @@ export default function App() {
                     color: tokens.colors.inkFaded,
                     marginBottom: 24
                   }}>
-                    Chiedimi una ricetta, consigli sugli ingredienti, o cosa cucinare stasera...
+                    {t('chat.askMe')}
                   </p>
                   {/* Initial Quick Replies */}
                   <QuickReplies>
@@ -762,6 +1289,19 @@ export default function App() {
                               servings={msg.parsedRecipe.servings}
                               ingredients={msg.parsedRecipe.ingredients.map(ing => ({ name: ing }))}
                               steps={msg.parsedRecipe.steps}
+                              onSave={isAuthenticated ? async () => {
+                                setSavingRecipeId(msg.id);
+                                await saveRecipe({
+                                  name: msg.parsedRecipe!.name,
+                                  time: msg.parsedRecipe!.time,
+                                  servings: msg.parsedRecipe!.servings,
+                                  ingredients: msg.parsedRecipe!.ingredients,
+                                  steps: msg.parsedRecipe!.steps,
+                                });
+                                setSavingRecipeId(null);
+                              } : undefined}
+                              isSaved={isRecipeSaved(msg.parsedRecipe.name)}
+                              isSaving={savingRecipeId === msg.id}
                             />
                           </>
                         ) : (
@@ -781,67 +1321,136 @@ export default function App() {
                       </div>
                     );
                   })}
-                  {/* Show loading dots only when waiting for first chunk */}
-                  {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && !messages[messages.length - 1].content && (
-                    <LoadingDots />
-                  )}
                 </>
               )}
             </div>
-
+            )}
           </div>
         )}
 
         {/* ============ RICETTE ============ */}
         {screen === 'recipes' && (
           <div style={{ maxWidth: 600, margin: '0 auto' }}>
-            {/* Preferite */}
-            {favorites.length > 0 && (
-              <>
-                <ZineText size="md" style={{ color: '#8B857C', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                  <SketchHeart size={18} /> preferite
+            {/* Empty State - not logged in */}
+            {!isAuthenticated && (
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <SketchBowl size={64} />
+                <ZineText size="lg" style={{ display: 'block', marginTop: 16, color: '#8B857C' }}>
+                  {t('recipes.loginRequired') || 'Accedi per salvare le ricette'}
                 </ZineText>
-                <div style={{ display: 'flex', gap: 20, overflowX: 'auto', paddingBottom: 16, marginBottom: 24 }}>
-                  {recipes.filter(r => favorites.includes(r.id)).map((r, idx) => (
-                    <ZinePhotoCard
-                      key={r.id}
-                      Illustration={r.Illustration}
-                      caption={r.name}
-                      note={r.time}
-                      rotation={idx % 2 === 0 ? 2 : -2}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* Tutte */}
-            <ZineText size="lg" underline style={{ display: 'block', marginBottom: 20 }}>
-              tutte le ricette
-            </ZineText>
-
-            {recipes.map(r => (
-              <div key={r.id} style={{ position: 'relative' }}>
-                <ZineRecipeCard title={r.name} note={r.note} time={r.time} Illustration={r.Illustration} />
                 <button
-                  onClick={() => toggleFavorite(r.id)}
-                  style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', cursor: 'pointer', zIndex: 1 }}
+                  onClick={() => setAuthModalOpen(true)}
+                  style={{
+                    marginTop: 20,
+                    padding: '10px 24px',
+                    background: '#2D2A26',
+                    color: '#FAF7F2',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontFamily: "'Caveat', cursive",
+                    fontSize: 17,
+                    cursor: 'pointer'
+                  }}
                 >
-                  <svg width="22" height="22" viewBox="0 0 20 20" fill={favorites.includes(r.id) ? "#2D2A26" : "none"}>
-                    <path
-                      d="M10 17 Q4 12 4 8 Q4 4 7 4 Q9 4 10 6 Q11 4 13 4 Q16 4 16 8 Q16 12 10 17"
-                      stroke="#2D2A26"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
+                  {t('auth.login')}
                 </button>
               </div>
-            ))}
+            )}
 
-            <HandDrawnFrame style={{ marginTop: 8, textAlign: 'center', cursor: 'pointer' }}>
-              <ZineText size="md" style={{ color: '#8B857C' }}>+ aggiungi ricetta</ZineText>
-            </HandDrawnFrame>
+            {/* Empty State - logged in but no recipes */}
+            {isAuthenticated && savedRecipes.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <SketchBowl size={64} />
+                <ZineText size="lg" style={{ display: 'block', marginTop: 16, color: '#8B857C' }}>
+                  {t('recipes.empty') || 'Nessuna ricetta salvata'}
+                </ZineText>
+                <ZineText size="sm" style={{ display: 'block', marginTop: 8, color: '#A8A4A0' }}>
+                  {t('recipes.emptyHint') || 'Chiedi una ricetta in chat e salvala qui'}
+                </ZineText>
+                <button
+                  onClick={() => setScreen('chat')}
+                  style={{
+                    marginTop: 20,
+                    padding: '10px 24px',
+                    background: '#2D2A26',
+                    color: '#FAF7F2',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontFamily: "'Caveat', cursive",
+                    fontSize: 17,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {t('nav.chat')}
+                </button>
+              </div>
+            )}
+
+            {/* Recipes content - only show if logged in and has recipes */}
+            {isAuthenticated && savedRecipes.length > 0 && (
+              <>
+                {/* Preferite */}
+                {favoriteRecipes.length > 0 && (
+                  <>
+                    <ZineText size="md" style={{ color: '#8B857C', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                      <SketchHeart size={18} /> {t('recipes.favorites')}
+                    </ZineText>
+                    <div style={{ display: 'flex', gap: 20, overflowX: 'auto', paddingBottom: 16, marginBottom: 24 }}>
+                      {favoriteRecipes.map((r, idx) => (
+                        <ZinePhotoCard
+                          key={r.id}
+                          Illustration={SketchBowl}
+                          caption={r.name}
+                          note={r.time || ''}
+                          rotation={idx % 2 === 0 ? 2 : -2}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* Tutte */}
+                <ZineText size="lg" underline style={{ display: 'block', marginBottom: 20 }}>
+                  {t('recipes.all')}
+                </ZineText>
+
+                {savedRecipes.map(r => (
+                  <div key={r.id} style={{ position: 'relative' }}>
+                    <ZineRecipeCard
+                      title={r.name}
+                      note={r.note || (r.ingredients.length > 0 ? `${r.ingredients.length} ingredienti` : '')}
+                      time={r.time || ''}
+                      Illustration={SketchBowl}
+                    />
+                    <div style={{ position: 'absolute', top: 20, right: 20, display: 'flex', gap: 8, zIndex: 1 }}>
+                      {/* Favorite button */}
+                      <button
+                        onClick={() => toggleRecipeFavorite(r.id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
+                      >
+                        <svg width="22" height="22" viewBox="0 0 20 20" fill={r.isFavorite ? "#2D2A26" : "none"}>
+                          <path
+                            d="M10 17 Q4 12 4 8 Q4 4 7 4 Q9 4 10 6 Q11 4 13 4 Q16 4 16 8 Q16 12 10 17"
+                            stroke="#2D2A26"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </button>
+                      {/* Delete button */}
+                      <button
+                        onClick={() => deleteRecipe(r.id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#C4C0B9" strokeWidth="1.5">
+                          <path d="M6 6L14 14M6 14L14 6" strokeLinecap="round"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
 
@@ -878,114 +1487,174 @@ export default function App() {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                 <CameraIcon />
                 <ZineText size="lg" style={{ color: '#2D2A26' }}>
-                  {isAnalyzingPhoto ? 'Analizzo la foto...' : 'Scatta una foto'}
+                  {isAnalyzingPhoto ? t('pantry.analyzing') : t('pantry.takePhoto')}
                 </ZineText>
                 <ZineText size="sm" style={{ color: '#8B857C' }}>
-                  L'AI riconosce gli ingredienti automaticamente
+                  {t('pantry.aiRecognizes')}
                 </ZineText>
               </div>
             </div>
 
-            {/* Stats - Corner Box Style */}
-            <div style={{ display: 'flex', gap: 16, marginBottom: 28 }}>
-              {/* Stat Box 1 */}
-              <div style={{ position: 'relative', padding: '24px 20px', flex: 1, textAlign: 'center' }}>
-                <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-                  viewBox="0 0 150 100" preserveAspectRatio="none" fill="none">
-                  <path d="M3 12 L3 3 L12 3" stroke="#2D2A26" strokeWidth="1.2" strokeLinecap="round"/>
-                  <path d="M138 3 L147 3 L147 12" stroke="#2D2A26" strokeWidth="1.2" strokeLinecap="round"/>
-                  <path d="M147 88 L147 97 L138 97" stroke="#2D2A26" strokeWidth="1.2" strokeLinecap="round"/>
-                  <path d="M12 97 L3 97 L3 88" stroke="#2D2A26" strokeWidth="1.2" strokeLinecap="round"/>
-                </svg>
-                <div style={{ fontFamily: "'Caveat', cursive", fontSize: 42, color: '#2D2A26', lineHeight: 1 }}>
-                  {pantryItems.length}
-                </div>
-                <div style={{ fontFamily: "'Caveat', cursive", fontSize: 16, color: '#8B857C', marginTop: 4 }}>
-                  ingredienti
-                </div>
+            {/* Empty State */}
+            {pantryItems.length === 0 && !isAnalyzingPhoto && (
+              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                <SketchBowl size={64} />
+                <ZineText size="lg" style={{ display: 'block', marginTop: 16, color: '#8B857C' }}>
+                  {t('pantry.empty')}
+                </ZineText>
+                <ZineText size="sm" style={{ display: 'block', marginTop: 8, color: '#A8A4A0' }}>
+                  {t('pantry.emptyHint')}
+                </ZineText>
               </div>
-              {/* Stat Box 2 */}
-              <div style={{ position: 'relative', padding: '24px 20px', flex: 1, textAlign: 'center' }}>
-                <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-                  viewBox="0 0 150 100" preserveAspectRatio="none" fill="none">
-                  <path d="M3 12 L3 3 L12 3" stroke="#2D2A26" strokeWidth="1.2" strokeLinecap="round"/>
-                  <path d="M138 3 L147 3 L147 12" stroke="#2D2A26" strokeWidth="1.2" strokeLinecap="round"/>
-                  <path d="M147 88 L147 97 L138 97" stroke="#2D2A26" strokeWidth="1.2" strokeLinecap="round"/>
-                  <path d="M12 97 L3 97 L3 88" stroke="#2D2A26" strokeWidth="1.2" strokeLinecap="round"/>
-                </svg>
-                <div style={{ fontFamily: "'Caveat', cursive", fontSize: 42, color: '#2D2A26', lineHeight: 1 }}>
-                  {pantryItems.filter(i => i.expiring).length}
-                </div>
-                <div style={{ fontFamily: "'Caveat', cursive", fontSize: 16, color: '#8B857C', marginTop: 4 }}>
-                  in scadenza
-                </div>
-              </div>
-            </div>
+            )}
 
-            {/* Usa Presto - Dashed Box */}
-            <div style={{
-              border: '1.5px dashed #C4C0B9',
-              background: '#FEF9E7',
-              padding: 20,
-              marginBottom: 32
-            }}>
-              <div style={{ marginBottom: 16 }}>
-                <span style={{ position: 'relative', display: 'inline-block', padding: '3px 12px' }}>
-                  <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-                    viewBox="0 0 100 32" preserveAspectRatio="none" fill="none">
-                    <ellipse cx="50" cy="16" rx="48" ry="14" stroke="#2D2A26" strokeWidth="1.2"/>
-                  </svg>
-                  <span style={{ position: 'relative', fontFamily: "'Caveat', cursive", fontSize: 16, color: '#2D2A26' }}>
-                    usa presto!
-                  </span>
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                {pantryItems.filter(i => i.expiring).map(item => (
-                  <div key={item.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 60 }}>
-                    <item.Illustration size={28} />
-                    <span style={{ fontFamily: "'Caveat', cursive", fontSize: 15, color: '#2D2A26' }}>{item.name}</span>
-                    <span style={{ fontFamily: "'Caveat', cursive", fontSize: 12, color: '#C4C0B9' }}>{item.qty}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* In Dispensa - Line style */}
-            <section style={{ marginBottom: 32 }}>
-              <div style={{ marginBottom: 20 }}>
-                <ZineText size="lg" style={{ display: 'block' }}>in dispensa</ZineText>
-                <svg width="80" height="6" viewBox="0 0 80 6" style={{ display: 'block', marginTop: 6 }}>
-                  <path d="M0 3 Q10 0 20 3 Q30 6 40 3 Q50 0 60 3 Q70 6 80 3" stroke="#C4C0B9" strokeWidth="1" fill="none"/>
-                </svg>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px 16px' }}>
-                {pantryItems.map(item => (
-                  <div key={item.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <div style={{
-                      width: '100%',
-                      paddingBottom: 16,
-                      marginBottom: 8,
-                      borderBottom: '1.5px solid #2D2A26',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      minHeight: 56,
-                    }}>
-                      <item.Illustration size={36} />
+            {/* Content only shows when there are items */}
+            {pantryItems.length > 0 && (
+              <>
+                {/* Stats - Corner Box Style */}
+                <div style={{ display: 'flex', gap: 16, marginBottom: 28 }}>
+                  {/* Stat Box 1 */}
+                  <div style={{ position: 'relative', padding: '24px 20px', flex: 1, textAlign: 'center' }}>
+                    <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+                      viewBox="0 0 150 100" preserveAspectRatio="none" fill="none">
+                      <path d="M3 12 L3 3 L12 3" stroke="#2D2A26" strokeWidth="1.2" strokeLinecap="round"/>
+                      <path d="M138 3 L147 3 L147 12" stroke="#2D2A26" strokeWidth="1.2" strokeLinecap="round"/>
+                      <path d="M147 88 L147 97 L138 97" stroke="#2D2A26" strokeWidth="1.2" strokeLinecap="round"/>
+                      <path d="M12 97 L3 97 L3 88" stroke="#2D2A26" strokeWidth="1.2" strokeLinecap="round"/>
+                    </svg>
+                    <div style={{ fontFamily: "'Caveat', cursive", fontSize: 42, color: '#2D2A26', lineHeight: 1 }}>
+                      {pantryItems.length}
                     </div>
-                    <span style={{ fontFamily: "'Caveat', cursive", fontSize: 15, color: '#8B857C' }}>
-                      {item.name}
-                    </span>
+                    <div style={{ fontFamily: "'Caveat', cursive", fontSize: 16, color: '#8B857C', marginTop: 4 }}>
+                      {t('pantry.ingredients')}
+                    </div>
                   </div>
-                ))}
-              </div>
-            </section>
+                  {/* Stat Box 2 */}
+                  <div style={{ position: 'relative', padding: '24px 20px', flex: 1, textAlign: 'center' }}>
+                    <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+                      viewBox="0 0 150 100" preserveAspectRatio="none" fill="none">
+                      <path d="M3 12 L3 3 L12 3" stroke="#2D2A26" strokeWidth="1.2" strokeLinecap="round"/>
+                      <path d="M138 3 L147 3 L147 12" stroke="#2D2A26" strokeWidth="1.2" strokeLinecap="round"/>
+                      <path d="M147 88 L147 97 L138 97" stroke="#2D2A26" strokeWidth="1.2" strokeLinecap="round"/>
+                      <path d="M12 97 L3 97 L3 88" stroke="#2D2A26" strokeWidth="1.2" strokeLinecap="round"/>
+                    </svg>
+                    <div style={{ fontFamily: "'Caveat', cursive", fontSize: 42, color: '#2D2A26', lineHeight: 1 }}>
+                      {pantryItems.filter(i => i.expiring).length}
+                    </div>
+                    <div style={{ fontFamily: "'Caveat', cursive", fontSize: 16, color: '#8B857C', marginTop: 4 }}>
+                      {t('pantry.expiring')}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Usa Presto - Only show if there are expiring items */}
+                {pantryItems.filter(i => i.expiring).length > 0 && (
+                  <div style={{
+                    border: '1.5px dashed #C4C0B9',
+                    background: '#FEF9E7',
+                    padding: 20,
+                    marginBottom: 32
+                  }}>
+                    <div style={{ marginBottom: 16 }}>
+                      <span style={{ position: 'relative', display: 'inline-block', padding: '3px 12px' }}>
+                        <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+                          viewBox="0 0 100 32" preserveAspectRatio="none" fill="none">
+                          <ellipse cx="50" cy="16" rx="48" ry="14" stroke="#2D2A26" strokeWidth="1.2"/>
+                        </svg>
+                        <span style={{ position: 'relative', fontFamily: "'Caveat', cursive", fontSize: 16, color: '#2D2A26' }}>
+                          {t('pantry.useNow')}
+                        </span>
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      {pantryItems.filter(i => i.expiring).map(item => (
+                        <div key={item.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 60 }}>
+                          <item.Illustration size={28} />
+                          <span style={{ fontFamily: "'Caveat', cursive", fontSize: 15, color: '#2D2A26' }}>{item.name}</span>
+                          <span style={{ fontFamily: "'Caveat', cursive", fontSize: 12, color: '#C4C0B9' }}>{item.qty}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* In Dispensa - Line style */}
+                <section style={{ marginBottom: 32 }}>
+                  <div style={{ marginBottom: 20 }}>
+                    <ZineText size="lg" style={{ display: 'block' }}>{t('pantry.inPantry')}</ZineText>
+                    <svg width="80" height="6" viewBox="0 0 80 6" style={{ display: 'block', marginTop: 6 }}>
+                      <path d="M0 3 Q10 0 20 3 Q30 6 40 3 Q50 0 60 3 Q70 6 80 3" stroke="#C4C0B9" strokeWidth="1" fill="none"/>
+                    </svg>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px 16px' }}>
+                    {pantryItems.map(item => (
+                      <div key={item.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <div style={{
+                          width: '100%',
+                          paddingBottom: 16,
+                          marginBottom: 8,
+                          borderBottom: '1.5px solid #2D2A26',
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          minHeight: 56,
+                        }}>
+                          <item.Illustration size={36} />
+                        </div>
+                        <span style={{ fontFamily: "'Caveat', cursive", fontSize: 15, color: '#8B857C' }}>
+                          {item.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Ask AI what to cook button */}
+                  <button
+                    onClick={() => {
+                      const ingredientsList = pantryItems.map(i => i.name).join(', ');
+                      const msg = language === 'it'
+                        ? `Cosa posso cucinare con: ${ingredientsList}?`
+                        : language === 'en'
+                        ? `What can I cook with: ${ingredientsList}?`
+                        : language === 'fr'
+                        ? `Que puis-je cuisiner avec: ${ingredientsList}?`
+                        : language === 'es'
+                        ? `¿Qué puedo cocinar con: ${ingredientsList}?`
+                        : language === 'ja'
+                        ? `${ingredientsList}で何が作れる？`
+                        : `用${ingredientsList}可以煮什麼？`;
+                      sendMessage(msg);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      width: '100%',
+                      marginTop: 20,
+                      padding: '12px 20px',
+                      background: '#2D2A26',
+                      color: '#FAF7F2',
+                      border: 'none',
+                      borderRadius: 8,
+                      fontFamily: "'Caveat', cursive",
+                      fontSize: 18,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M12 2L14 8H20L15 12L17 18L12 14L7 18L9 12L4 8H10L12 2Z" strokeLinejoin="round"/>
+                    </svg>
+                    {t('pantry.suggestDishes')}
+                  </button>
+                </section>
+              </>
+            )}
 
             {/* Lista spesa - Dashed Box */}
             <section>
               <div style={{ marginBottom: 20 }}>
-                <ZineText size="lg" style={{ display: 'block' }}>lista della spesa</ZineText>
+                <ZineText size="lg" style={{ display: 'block' }}>{t('pantry.shoppingList')}</ZineText>
                 <svg width="100" height="6" viewBox="0 0 100 6" style={{ display: 'block', marginTop: 6 }}>
                   <path d="M0 3 Q12.5 0 25 3 Q37.5 6 50 3 Q62.5 0 75 3 Q87.5 6 100 3" stroke="#C4C0B9" strokeWidth="1" fill="none"/>
                 </svg>
@@ -1035,8 +1704,8 @@ export default function App() {
         )}
         </main>
 
-        {/* Fixed Chat Input - Only on chat screen */}
-        {screen === 'chat' && (
+        {/* Fixed Chat Input - Only on chat screen with active conversation */}
+        {screen === 'chat' && activeId && (
           <div style={{
             position: 'fixed',
             bottom: 20,
@@ -1052,7 +1721,7 @@ export default function App() {
                 gap: 12,
                 boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
               }}>
-                {/* Options Row - Menu Mode + Diet */}
+                {/* Options Row - Menu Mode + Skills + Diet */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1063,48 +1732,119 @@ export default function App() {
                   borderBottom: '1px dashed #E8E4DE',
                   flexWrap: 'wrap'
                 }}>
-                  {/* Menu Mode Toggle - Radio Style */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <button
-                      onClick={() => setMenuMode(false)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6
-                      }}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-                        <circle cx="9" cy="9" r="7" stroke="#2D2A26" strokeWidth="1.5" fill="none"/>
-                        {!menuMode && <circle cx="9" cy="9" r="4" fill="#2D2A26"/>}
-                      </svg>
-                      <ZineText size="sm" style={{ color: !menuMode ? '#2D2A26' : '#A8A4A0' }}>
-                        Piatto
-                      </ZineText>
-                    </button>
-                    <button
-                      onClick={() => setMenuMode(true)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6
-                      }}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-                        <circle cx="9" cy="9" r="7" stroke="#2D2A26" strokeWidth="1.5" fill="none"/>
-                        {menuMode && <circle cx="9" cy="9" r="4" fill="#2D2A26"/>}
-                      </svg>
-                      <ZineText size="sm" style={{ color: menuMode ? '#2D2A26' : '#A8A4A0' }}>
-                        Menu
-                      </ZineText>
-                    </button>
+                  {/* Left side: Mode + Skills */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                    {/* Menu Mode Toggle - Radio Style */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <button
+                        onClick={() => setMenuMode(false)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+                          <circle cx="9" cy="9" r="7" stroke="#2D2A26" strokeWidth="1.5" fill="none"/>
+                          {!menuMode && <circle cx="9" cy="9" r="4" fill="#2D2A26"/>}
+                        </svg>
+                        <ZineText size="sm" style={{ color: !menuMode ? '#2D2A26' : '#A8A4A0' }}>
+                          {t('chat.dish')}
+                        </ZineText>
+                      </button>
+                      <button
+                        onClick={() => setMenuMode(true)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+                          <circle cx="9" cy="9" r="7" stroke="#2D2A26" strokeWidth="1.5" fill="none"/>
+                          {menuMode && <circle cx="9" cy="9" r="4" fill="#2D2A26"/>}
+                        </svg>
+                        <ZineText size="sm" style={{ color: menuMode ? '#2D2A26' : '#A8A4A0' }}>
+                          {t('chat.menu')}
+                        </ZineText>
+                      </button>
+                    </div>
+
+                    {/* Skill Pills - Toggle Style */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {/* Stellato Pill */}
+                      <button
+                        onClick={() => setStellatoMode(!stellatoMode)}
+                        title={t('skill.stellatoDesc')}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          padding: '5px 12px',
+                          border: stellatoMode ? '1.5px solid #2D2A26' : '1.5px dashed #C4C0B9',
+                          borderRadius: 16,
+                          background: stellatoMode ? '#2D2A26' : 'transparent',
+                          cursor: 'pointer',
+                          fontFamily: "'Caveat', cursive",
+                          fontSize: 15,
+                          color: stellatoMode ? '#FAF7F2' : '#8B857C',
+                          transition: 'all 0.15s',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                          <path d="M8 1L9.5 5.5L14 6L10.5 9.5L12 14L8 11L4 14L5.5 9.5L2 6L6.5 5.5Z"
+                            stroke={stellatoMode ? '#FAF7F2' : '#8B857C'}
+                            strokeWidth="1.2"
+                            fill={stellatoMode ? '#FAF7F2' : 'none'}
+                            strokeLinejoin="round"/>
+                        </svg>
+                        {t('skill.stellato')}
+                      </button>
+
+                      {/* Recupero Pill */}
+                      <button
+                        onClick={() => setRecuperoMode(!recuperoMode)}
+                        title={t('skill.recuperoDesc')}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          padding: '5px 12px',
+                          border: recuperoMode ? '1.5px solid #2D2A26' : '1.5px dashed #C4C0B9',
+                          borderRadius: 16,
+                          background: recuperoMode ? '#2D2A26' : 'transparent',
+                          cursor: 'pointer',
+                          fontFamily: "'Caveat', cursive",
+                          fontSize: 15,
+                          color: recuperoMode ? '#FAF7F2' : '#8B857C',
+                          transition: 'all 0.15s',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                          <path d="M2 8C2 4.7 4.7 2 8 2C10.2 2 12.1 3.2 13.2 5"
+                            stroke={recuperoMode ? '#FAF7F2' : '#8B857C'}
+                            strokeWidth="1.2"
+                            strokeLinecap="round"/>
+                          <path d="M14 8C14 11.3 11.3 14 8 14C5.8 14 3.9 12.8 2.8 11"
+                            stroke={recuperoMode ? '#FAF7F2' : '#8B857C'}
+                            strokeWidth="1.2"
+                            strokeLinecap="round"/>
+                          <path d="M13 2V5.5H9.5" stroke={recuperoMode ? '#FAF7F2' : '#8B857C'} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M3 14V10.5H6.5" stroke={recuperoMode ? '#FAF7F2' : '#8B857C'} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        {t('skill.recupero')}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Diet Dropdown - Custom hand-drawn, opens upward */}
@@ -1250,7 +1990,7 @@ export default function App() {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                    placeholder={menuMode ? 'Descrivi il menu che vuoi...' : 'Scrivi un messaggio...'}
+                    placeholder={menuMode ? t('chat.menuPlaceholder') : t('chat.inputPlaceholder')}
                     disabled={isLoading}
                     style={{
                       flex: 1,
@@ -1280,7 +2020,7 @@ export default function App() {
                       flexShrink: 0
                     }}
                   >
-                    {isLoading ? 'Penso...' : 'Invia'} <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ marginLeft: 4 }}><path d="M8 1 L8 15 M1 8 L15 8 M3 3 L13 13 M13 3 L3 13" stroke="#FAF7F2" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                    {isLoading ? t('chat.thinking') : t('chat.send')} <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ marginLeft: 4 }}><path d="M8 1 L8 15 M1 8 L15 8 M3 3 L13 13 M13 3 L3 13" stroke="#FAF7F2" strokeWidth="1.2" strokeLinecap="round"/></svg>
                   </button>
                 </div>
               </DashedBox>
@@ -1316,6 +2056,15 @@ export default function App() {
           </button>
         )}
       </div>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+        t={t}
+      />
     </ZinePage>
   );
 }

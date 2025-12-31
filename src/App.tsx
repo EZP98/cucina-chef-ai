@@ -23,6 +23,7 @@ import {
 import { useConversations } from './hooks/useConversations';
 import { useAuth } from './hooks/useAuth';
 import { useRecipes } from './hooks/useRecipes';
+import { usePantry } from './hooks/usePantry';
 import { AuthModal } from './components/auth/AuthModal';
 import { UserMenu, LoginButton } from './components/auth/UserMenu';
 import { useI18nStandalone } from './hooks/useI18n';
@@ -97,7 +98,9 @@ const CameraIcon = () => (
 // Types
 type Screen = 'home' | 'chat' | 'recipes' | 'pantry';
 
-interface PantryItem {
+// UI representation of pantry item (includes illustration component)
+interface PantryItemUI {
+  id: string;
   name: string;
   qty: string;
   Illustration: React.ComponentType<{ size?: number }>;
@@ -146,6 +149,22 @@ export default function App() {
   // State for tracking which recipe is being saved
   const [savingRecipeId, setSavingRecipeId] = useState<string | null>(null);
 
+  // Pantry hook
+  const {
+    items: pantryItemsAPI,
+    addItems: addPantryItems,
+    deleteItem: deletePantryItem,
+  } = usePantry(token);
+
+  // Convert API pantry items to UI format (with illustrations)
+  const pantryItems: PantryItemUI[] = pantryItemsAPI.map(item => ({
+    id: item.id,
+    name: item.name,
+    qty: item.quantity || '?',
+    Illustration: getIngredientIcon(item.name),
+    expiring: item.expiring,
+  }));
+
   // i18n hook
   const { language, setLanguage, t, languageNames, availableLanguages } = useI18nStandalone();
 
@@ -191,8 +210,6 @@ export default function App() {
   ]);
 
 
-  // Pantry starts empty - populated by AI photo analysis
-  const [pantryItems, setPantryItems] = useState<PantryItem[]>([]);
 
   const [isAnalyzingPhoto, setIsAnalyzingPhoto] = useState(false);
   const [menuMode, setMenuMode] = useState(false);
@@ -266,20 +283,19 @@ export default function App() {
         const data = await response.json();
 
         if (data.ingredients && Array.isArray(data.ingredients)) {
-          // Replace pantry with new ingredients from photo
-          const newItems: PantryItem[] = data.ingredients.map((ing: { name: string; qty: string }) => ({
+          // Save ingredients to cloud
+          const newItems = data.ingredients.map((ing: { name: string; qty: string }) => ({
             name: ing.name,
-            qty: ing.qty || '?',
-            Illustration: getIngredientIcon(ing.name),
+            quantity: ing.qty || '?',
             expiring: false,
           }));
 
-          setPantryItems(newItems);
+          await addPantryItems(newItems);
           setIsAnalyzingPhoto(false);
 
           // Automatically ask AI to suggest dishes based on found ingredients
           if (newItems.length > 0) {
-            const ingredientsList = newItems.map(i => `${i.name} (${i.qty})`).join(', ');
+            const ingredientsList = newItems.map((i: { name: string; quantity: string }) => `${i.name} (${i.quantity})`).join(', ');
             const suggestionMessage = language === 'it'
               ? `Ho questi ingredienti nella dispensa: ${ingredientsList}. Cosa posso cucinare?`
               : language === 'en'
@@ -1051,7 +1067,7 @@ export default function App() {
               <ZineNoteCard highlight={t('home.expiring')} style={{ marginTop: 8, background: '#FFFBF0' }}>
                 <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginTop: 12 }}>
                   {pantryItems.filter(i => i.expiring).map(item => (
-                    <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <item.Illustration size={36} />
                       <ZineText size="sm">{item.name}</ZineText>
                     </div>
@@ -1568,7 +1584,7 @@ export default function App() {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       {pantryItems.filter(i => i.expiring).map(item => (
-                        <div key={item.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 60 }}>
+                        <div key={item.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 60 }}>
                           <item.Illustration size={28} />
                           <span style={{ fontFamily: "'Caveat', cursive", fontSize: 15, color: '#2D2A26' }}>{item.name}</span>
                           <span style={{ fontFamily: "'Caveat', cursive", fontSize: 12, color: '#C4C0B9' }}>{item.qty}</span>
@@ -1588,7 +1604,30 @@ export default function App() {
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px 16px' }}>
                     {pantryItems.map(item => (
-                      <div key={item.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <div key={item.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                        {/* Delete button */}
+                        <button
+                          onClick={() => deletePantryItem(item.id)}
+                          style={{
+                            position: 'absolute',
+                            top: -6,
+                            right: -6,
+                            background: '#FAF7F2',
+                            border: '1px solid #E8E4DE',
+                            borderRadius: '50%',
+                            width: 20,
+                            height: 20,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: 0,
+                          }}
+                        >
+                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#8B857C" strokeWidth="1.5">
+                            <path d="M2 2L8 8M2 8L8 2" strokeLinecap="round"/>
+                          </svg>
+                        </button>
                         <div style={{
                           width: '100%',
                           paddingBottom: 16,

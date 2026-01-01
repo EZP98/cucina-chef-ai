@@ -67,6 +67,31 @@ const CloseIcon = () => (
   </svg>
 );
 
+// Hand-drawn border for active nav item (like modal style)
+const NavItemBorder = () => (
+  <svg
+    style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      pointerEvents: 'none',
+    }}
+    viewBox="0 0 100 100"
+    preserveAspectRatio="none"
+    fill="none"
+  >
+    <path
+      d="M2 4 Q0 0 4 2 L96 2 Q100 0 98 4 L98 96 Q100 100 96 98 L4 98 Q0 100 2 96 Z"
+      stroke="#2D2A26"
+      strokeWidth="0.8"
+      fill="none"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 // Nav Icons - using GustoIcons with active state
 const NavChat = ({ active }: { active: boolean }) => (
   <IconChat size={26} color={active ? "#2D2A26" : "#A8A4A0"} fill={active ? "#FAF7F2" : "transparent"} />
@@ -170,6 +195,12 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const isOnline = useOnlineStatus();
+
+  // Helper to open auth modal with scroll to top
+  const openAuthModal = () => {
+    window.scrollTo(0, 0);
+    openAuthModal();
+  };
 
   // Auth hook
   const { user, token, isAuthenticated, login, register, logout } = useAuth();
@@ -315,7 +346,7 @@ export default function App() {
 
     // Require authentication
     if (!isAuthenticated) {
-      setAuthModalOpen(true);
+      openAuthModal();
       return;
     }
 
@@ -448,7 +479,7 @@ export default function App() {
 
     // Require authentication to send messages
     if (!isAuthenticated) {
-      setAuthModalOpen(true);
+      openAuthModal();
       return;
     }
 
@@ -800,7 +831,8 @@ export default function App() {
               key={id}
               onClick={() => navigate(`/${id}`)}
               style={{
-                background: screen === id ? '#F0EBE3' : 'transparent',
+                position: 'relative',
+                background: 'transparent',
                 border: 'none',
                 cursor: 'pointer',
                 display: 'flex',
@@ -812,6 +844,7 @@ export default function App() {
                 textAlign: 'left'
               }}
             >
+              {screen === id && <NavItemBorder />}
               <Icon active={screen === id} />
               <ZineText size="md" style={{ color: screen === id ? '#2D2A26' : '#8B857C' }}>{label}</ZineText>
             </button>
@@ -823,7 +856,7 @@ export default function App() {
               {isAuthenticated && user ? (
                 <UserMenu user={user} onLogout={logout} t={t} />
               ) : (
-                <LoginButton onClick={() => setAuthModalOpen(true)} t={t} />
+                <LoginButton onClick={() => openAuthModal()} t={t} />
               )}
               <LanguageSelector
                 currentLanguage={language}
@@ -884,7 +917,8 @@ export default function App() {
                 key={id}
                 onClick={() => { navigate(`/${id}`); setMenuOpen(false); }}
                 style={{
-                  background: screen === id ? '#F0EBE3' : 'transparent',
+                  position: 'relative',
+                  background: 'transparent',
                   border: 'none',
                   cursor: 'pointer',
                   display: 'flex',
@@ -897,6 +931,7 @@ export default function App() {
                   marginBottom: 8
                 }}
               >
+                {screen === id && <NavItemBorder />}
                 <Icon active={screen === id} />
                 <ZineText size="lg" style={{ color: screen === id ? '#2D2A26' : '#8B857C' }}>{label}</ZineText>
               </button>
@@ -909,7 +944,7 @@ export default function App() {
                   {isAuthenticated && user ? (
                     <UserMenu user={user} onLogout={logout} t={t} />
                   ) : (
-                    <LoginButton onClick={() => setAuthModalOpen(true)} t={t} />
+                    <LoginButton onClick={() => openAuthModal()} t={t} />
                   )}
                   <LanguageSelector
                     currentLanguage={language}
@@ -1805,7 +1840,7 @@ export default function App() {
                   {t('recipes.loginRequired') || 'Accedi per salvare le ricette'}
                 </ZineText>
                 <button
-                  onClick={() => setAuthModalOpen(true)}
+                  onClick={() => openAuthModal()}
                   style={{
                     marginTop: 20,
                     padding: '10px 24px',

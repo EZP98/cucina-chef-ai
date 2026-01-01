@@ -1,67 +1,158 @@
-// Quick Replies Generator - Contextual suggestions based on AI response
+// Quick Replies Generator - Context-aware suggestions
+// Supports multiple languages and special modes (Stellato, Recupero, Menu)
 
 import type { ParsedRecipe } from '../types/chat';
+import { translations, type Language } from '../i18n/translations';
+
+/**
+ * Context for generating quick replies
+ */
+export interface QuickReplyContext {
+  response: string;
+  recipe: ParsedRecipe | null;
+  language: Language;
+  menuMode?: boolean;
+  stellatoMode?: boolean;
+  recuperoMode?: boolean;
+}
+
+/**
+ * Helper: Check if response is informative (history, culture, ingredient info)
+ */
+function isInformativeResponse(text: string): boolean {
+  const infoKeywords = [
+    // Italian
+    'storia', 'origine', 'tradizione', 'cultura', 'secolo', 'nasce',
+    'curiosità', 'fatto interessante', 'sapevi che', 'si narra',
+    // English
+    'history', 'origin', 'tradition', 'culture', 'century', 'born',
+    'fun fact', 'did you know', 'legend has it',
+    // French
+    'histoire', 'origine', 'tradition', 'culture', 'siècle',
+    // Spanish
+    'historia', 'origen', 'tradición', 'cultura', 'siglo',
+    // Japanese
+    '歴史', '起源', '伝統', '文化',
+    // Chinese
+    '歷史', '起源', '傳統', '文化'
+  ];
+  return infoKeywords.some(k => text.includes(k));
+}
+
+/**
+ * Helper: Check if response is about cooking techniques
+ */
+function isTechniqueResponse(text: string): boolean {
+  const techKeywords = [
+    // Italian
+    'tecnica', 'metodo', 'cottura', 'temperatura', 'gradi', 'minuti',
+    'mescolare', 'impastare', 'rosolare', 'sfumare', 'mantecare',
+    // English
+    'technique', 'method', 'cooking', 'temperature', 'degrees', 'minutes',
+    'stir', 'knead', 'brown', 'deglaze', 'fold',
+    // French
+    'technique', 'méthode', 'cuisson', 'température', 'degrés',
+    // Spanish
+    'técnica', 'método', 'cocción', 'temperatura', 'grados',
+    // Japanese
+    'テクニック', '方法', '調理', '温度',
+    // Chinese
+    '技巧', '方法', '烹調', '溫度'
+  ];
+  // Technique responses are usually shorter (not full recipes)
+  return techKeywords.some(k => text.includes(k)) && text.length < 1500;
+}
+
+/**
+ * Helper: Check if response mentions time constraints
+ */
+function mentionsLongTime(text: string): boolean {
+  const timePatterns = [
+    /\d+\s*or[ae]/i,    // "2 ore", "1 ora"
+    /\d+\s*hour/i,      // "2 hours"
+    /\d+\s*heure/i,     // French
+    /\d+\s*hora/i,      // Spanish
+    /時間/,             // Japanese
+    /小時/              // Chinese
+  ];
+  return timePatterns.some(p => p.test(text));
+}
 
 /**
  * Generate contextual quick reply suggestions
  */
-export function generateQuickReplies(
-  response: string,
-  recipe: ParsedRecipe | null
-): string[] {
+export function generateQuickReplies(ctx: QuickReplyContext): string[] {
+  const { response, recipe, language, menuMode, stellatoMode, recuperoMode } = ctx;
+
+  // Translation helper with fallback to Italian
+  const t = (key: string): string => {
+    return translations[language]?.[key] || translations['it'][key] || key;
+  };
+
   const replies: string[] = [];
   const lowerResponse = response.toLowerCase();
 
-  // If response contains a recipe
+  // ==========================================
+  // TYPE 1: Response with recipe
+  // ==========================================
   if (recipe) {
-    replies.push('Varianti di questa ricetta?');
-    replies.push('Posso sostituire un ingrediente?');
+    replies.push(t('qr.recipe.variants'));
+    replies.push(t('qr.recipe.substitute'));
 
-    // If recipe has many ingredients
-    if (recipe.ingredients.length > 5) {
-      replies.push('Versione semplificata?');
+    // Complex recipe (many ingredients) -> offer simpler version
+    if (recipe.ingredients.length > 6) {
+      replies.push(t('qr.recipe.simpler'));
+    }
+
+    // Long cooking time -> offer faster version
+    if (recipe.time && mentionsLongTime(recipe.time)) {
+      replies.push(t('qr.recipe.faster'));
     }
   }
 
-  // If talking about ingredients
-  if (lowerResponse.includes('ingredienti') || lowerResponse.includes('ingredients')) {
-    if (!replies.includes('Posso sostituire un ingrediente?')) {
-      replies.push('Ho solo alcuni di questi ingredienti');
-    }
+  // ==========================================
+  // TYPE 2: Informative response (history, culture)
+  // ==========================================
+  else if (isInformativeResponse(lowerResponse)) {
+    replies.push(t('qr.info.more'));
+    replies.push(t('qr.info.dishes'));
+    replies.push(t('qr.info.pairings'));
   }
 
-  // If suggesting multiple options
-  if (lowerResponse.includes('potresti') ||
-      lowerResponse.includes('consiglio') ||
-      lowerResponse.includes('suggerisco')) {
-    replies.push('Dimmi di più sulla prima opzione');
+  // ==========================================
+  // TYPE 3: Technique response
+  // ==========================================
+  else if (isTechniqueResponse(lowerResponse)) {
+    replies.push(t('qr.technique.explain'));
+    replies.push(t('qr.technique.alternative'));
+    replies.push(t('qr.technique.tips'));
   }
 
-  // If mentioning cooking technique
-  if (lowerResponse.includes('tecnica') ||
-      lowerResponse.includes('metodo') ||
-      lowerResponse.includes('cottura')) {
-    replies.push('Spiegami meglio la tecnica');
+  // ==========================================
+  // SPECIAL MODES: Add 1 extra quick reply
+  // ==========================================
+  if (stellatoMode && replies.length < 4) {
+    replies.push(t('qr.stellato.plating'));
+  }
+  if (recuperoMode && replies.length < 4) {
+    replies.push(t('qr.recupero.other'));
+  }
+  if (menuMode && replies.length < 4) {
+    replies.push(t('qr.menu.wine'));
   }
 
-  // If mentioning time
-  if (lowerResponse.includes('minuti') || lowerResponse.includes('ore')) {
-    if (!replies.some(r => r.includes('veloce'))) {
-      replies.push('Versione più veloce?');
-    }
-  }
+  // ==========================================
+  // FILL WITH CONTEXTUAL DEFAULTS
+  // ==========================================
+  const defaults = recipe
+    ? ['qr.recipe.similar', 'qr.info.pairings']
+    : ['qr.info.more', 'qr.info.dishes'];
 
-  // Default suggestions if we don't have enough
-  const defaults = [
-    'Altra ricetta simile?',
-    'Cosa posso fare con questi ingredienti?',
-    'Suggeriscimi un abbinamento',
-  ];
-
-  for (const def of defaults) {
+  for (const key of defaults) {
     if (replies.length >= 4) break;
-    if (!replies.includes(def)) {
-      replies.push(def);
+    const text = t(key);
+    if (!replies.includes(text)) {
+      replies.push(text);
     }
   }
 
@@ -70,13 +161,47 @@ export function generateQuickReplies(
 }
 
 /**
- * Get initial quick replies for empty chat
+ * Get initial quick replies for empty chat (language-aware)
  */
-export function getInitialQuickReplies(): string[] {
-  return [
-    'Cosa cucino stasera?',
-    'Ho uova, pasta e formaggio',
-    'Ricetta veloce per 2 persone',
-    'Suggeriscimi un dolce facile',
-  ];
+export function getInitialQuickReplies(language: Language = 'it'): string[] {
+  const initial: Record<Language, string[]> = {
+    'it': [
+      'Cosa cucino stasera?',
+      'Ho uova, pasta e formaggio',
+      'Ricetta veloce per 2 persone',
+      'Suggeriscimi un dolce facile',
+    ],
+    'en': [
+      'What should I cook tonight?',
+      'I have eggs, pasta and cheese',
+      'Quick recipe for 2 people',
+      'Suggest an easy dessert',
+    ],
+    'zh-TW': [
+      '今晚該煮什麼？',
+      '我有雞蛋、麵和起司',
+      '兩人份快速食譜',
+      '推薦一個簡單的甜點',
+    ],
+    'fr': [
+      'Que cuisiner ce soir ?',
+      'J\'ai des œufs, des pâtes et du fromage',
+      'Recette rapide pour 2 personnes',
+      'Suggère-moi un dessert facile',
+    ],
+    'ja': [
+      '今夜何を作ろう？',
+      '卵、パスタ、チーズがあります',
+      '2人分の簡単レシピ',
+      '簡単なデザートを教えて',
+    ],
+    'es': [
+      '¿Qué cocino esta noche?',
+      'Tengo huevos, pasta y queso',
+      'Receta rápida para 2 personas',
+      'Sugiéreme un postre fácil',
+    ],
+  };
+
+  return initial[language] || initial['it'];
 }

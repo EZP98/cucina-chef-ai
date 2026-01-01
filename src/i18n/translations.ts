@@ -115,6 +115,32 @@ export const translations: Record<Language, Record<string, string>> = {
     // Misc
     'misc.poweredByAi': 'powered by AI',
     'misc.favorite': 'preferita',
+
+    // Quick Replies - Recipes
+    'qr.recipe.variants': 'Varianti di questa ricetta?',
+    'qr.recipe.substitute': 'Posso sostituire un ingrediente?',
+    'qr.recipe.simpler': 'Versione semplificata?',
+    'qr.recipe.faster': 'Versione più veloce?',
+    'qr.recipe.similar': 'Altra ricetta simile?',
+
+    // Quick Replies - Info
+    'qr.info.more': 'Raccontami di più',
+    'qr.info.dishes': 'Piatti con questo ingrediente?',
+    'qr.info.pairings': 'Abbinamenti consigliati?',
+    'qr.info.history': 'Qual è la storia?',
+
+    // Quick Replies - Technique
+    'qr.technique.explain': 'Spiegami la tecnica',
+    'qr.technique.alternative': 'Metodo alternativo?',
+    'qr.technique.tips': 'Consigli per riuscire?',
+
+    // Quick Replies - Special Modes
+    'qr.stellato.plating': 'Come impiattare?',
+    'qr.stellato.elevate': 'Come renderlo più gourmet?',
+    'qr.recupero.other': 'Altri usi per questi avanzi?',
+    'qr.recupero.freeze': 'Posso congelare?',
+    'qr.menu.wine': 'Vino consigliato?',
+    'qr.menu.sequence': 'In che ordine servire?',
   },
 
   // ============================================
@@ -210,6 +236,32 @@ export const translations: Record<Language, Record<string, string>> = {
 
     'misc.poweredByAi': 'powered by AI',
     'misc.favorite': 'favorite',
+
+    // Quick Replies - Recipes
+    'qr.recipe.variants': 'Variations of this recipe?',
+    'qr.recipe.substitute': 'Can I substitute an ingredient?',
+    'qr.recipe.simpler': 'Simpler version?',
+    'qr.recipe.faster': 'Faster version?',
+    'qr.recipe.similar': 'Another similar recipe?',
+
+    // Quick Replies - Info
+    'qr.info.more': 'Tell me more',
+    'qr.info.dishes': 'Dishes with this ingredient?',
+    'qr.info.pairings': 'Recommended pairings?',
+    'qr.info.history': 'What\'s the history?',
+
+    // Quick Replies - Technique
+    'qr.technique.explain': 'Explain the technique',
+    'qr.technique.alternative': 'Alternative method?',
+    'qr.technique.tips': 'Tips for success?',
+
+    // Quick Replies - Special Modes
+    'qr.stellato.plating': 'How to plate?',
+    'qr.stellato.elevate': 'How to make it more gourmet?',
+    'qr.recupero.other': 'Other uses for leftovers?',
+    'qr.recupero.freeze': 'Can I freeze it?',
+    'qr.menu.wine': 'Recommended wine?',
+    'qr.menu.sequence': 'In what order to serve?',
   },
 
   // ============================================
@@ -305,6 +357,32 @@ export const translations: Record<Language, Record<string, string>> = {
 
     'misc.poweredByAi': 'AI 驅動',
     'misc.favorite': '收藏',
+
+    // Quick Replies - Recipes
+    'qr.recipe.variants': '這道菜有什麼變化版本？',
+    'qr.recipe.substitute': '可以替換食材嗎？',
+    'qr.recipe.simpler': '簡化版本？',
+    'qr.recipe.faster': '更快的版本？',
+    'qr.recipe.similar': '其他類似的食譜？',
+
+    // Quick Replies - Info
+    'qr.info.more': '告訴我更多',
+    'qr.info.dishes': '用這個食材可以做什麼菜？',
+    'qr.info.pairings': '推薦的搭配？',
+    'qr.info.history': '這道菜的歷史是什麼？',
+
+    // Quick Replies - Technique
+    'qr.technique.explain': '解釋這個技巧',
+    'qr.technique.alternative': '有其他方法嗎？',
+    'qr.technique.tips': '成功的秘訣？',
+
+    // Quick Replies - Special Modes
+    'qr.stellato.plating': '如何擺盤？',
+    'qr.stellato.elevate': '如何讓它更高級？',
+    'qr.recupero.other': '剩餘食材還能做什麼？',
+    'qr.recupero.freeze': '可以冷凍嗎？',
+    'qr.menu.wine': '推薦什麼酒？',
+    'qr.menu.sequence': '應該按什麼順序上菜？',
   },
 
   // ============================================
@@ -400,6 +478,32 @@ export const translations: Record<Language, Record<string, string>> = {
 
     'misc.poweredByAi': 'propulsé par IA',
     'misc.favorite': 'favori',
+
+    // Quick Replies - Recipes
+    'qr.recipe.variants': 'Variantes de cette recette ?',
+    'qr.recipe.substitute': 'Puis-je substituer un ingrédient ?',
+    'qr.recipe.simpler': 'Version simplifiée ?',
+    'qr.recipe.faster': 'Version plus rapide ?',
+    'qr.recipe.similar': 'Une autre recette similaire ?',
+
+    // Quick Replies - Info
+    'qr.info.more': 'Dis-moi en plus',
+    'qr.info.dishes': 'Plats avec cet ingrédient ?',
+    'qr.info.pairings': 'Accords recommandés ?',
+    'qr.info.history': 'Quelle est l\'histoire ?',
+
+    // Quick Replies - Technique
+    'qr.technique.explain': 'Explique la technique',
+    'qr.technique.alternative': 'Méthode alternative ?',
+    'qr.technique.tips': 'Conseils pour réussir ?',
+
+    // Quick Replies - Special Modes
+    'qr.stellato.plating': 'Comment dresser ?',
+    'qr.stellato.elevate': 'Comment le rendre plus gastronomique ?',
+    'qr.recupero.other': 'Autres utilisations des restes ?',
+    'qr.recupero.freeze': 'Puis-je le congeler ?',
+    'qr.menu.wine': 'Vin recommandé ?',
+    'qr.menu.sequence': 'Dans quel ordre servir ?',
   },
 
   // ============================================
@@ -495,6 +599,32 @@ export const translations: Record<Language, Record<string, string>> = {
 
     'misc.poweredByAi': 'AI搭載',
     'misc.favorite': 'お気に入り',
+
+    // Quick Replies - Recipes
+    'qr.recipe.variants': 'このレシピのバリエーションは？',
+    'qr.recipe.substitute': '材料を代用できますか？',
+    'qr.recipe.simpler': '簡単なバージョンは？',
+    'qr.recipe.faster': 'もっと早いバージョンは？',
+    'qr.recipe.similar': '似たレシピを教えて？',
+
+    // Quick Replies - Info
+    'qr.info.more': 'もっと教えて',
+    'qr.info.dishes': 'この食材を使った料理は？',
+    'qr.info.pairings': 'おすすめの組み合わせは？',
+    'qr.info.history': 'この料理の歴史は？',
+
+    // Quick Replies - Technique
+    'qr.technique.explain': 'テクニックを説明して',
+    'qr.technique.alternative': '別の方法はある？',
+    'qr.technique.tips': '成功のコツは？',
+
+    // Quick Replies - Special Modes
+    'qr.stellato.plating': '盛り付け方は？',
+    'qr.stellato.elevate': 'もっと高級にするには？',
+    'qr.recupero.other': '残り物の他の使い方は？',
+    'qr.recupero.freeze': '冷凍できますか？',
+    'qr.menu.wine': 'おすすめのワインは？',
+    'qr.menu.sequence': 'どの順番で出すべき？',
   },
 
   // ============================================
@@ -590,6 +720,32 @@ export const translations: Record<Language, Record<string, string>> = {
 
     'misc.poweredByAi': 'impulsado por IA',
     'misc.favorite': 'favorito',
+
+    // Quick Replies - Recipes
+    'qr.recipe.variants': '¿Variantes de esta receta?',
+    'qr.recipe.substitute': '¿Puedo sustituir un ingrediente?',
+    'qr.recipe.simpler': '¿Versión simplificada?',
+    'qr.recipe.faster': '¿Versión más rápida?',
+    'qr.recipe.similar': '¿Otra receta similar?',
+
+    // Quick Replies - Info
+    'qr.info.more': 'Cuéntame más',
+    'qr.info.dishes': '¿Platos con este ingrediente?',
+    'qr.info.pairings': '¿Maridajes recomendados?',
+    'qr.info.history': '¿Cuál es la historia?',
+
+    // Quick Replies - Technique
+    'qr.technique.explain': 'Explícame la técnica',
+    'qr.technique.alternative': '¿Método alternativo?',
+    'qr.technique.tips': '¿Consejos para lograrlo?',
+
+    // Quick Replies - Special Modes
+    'qr.stellato.plating': '¿Cómo emplatar?',
+    'qr.stellato.elevate': '¿Cómo hacerlo más gourmet?',
+    'qr.recupero.other': '¿Otros usos para las sobras?',
+    'qr.recupero.freeze': '¿Puedo congelarlo?',
+    'qr.menu.wine': '¿Vino recomendado?',
+    'qr.menu.sequence': '¿En qué orden servir?',
   },
 };
 

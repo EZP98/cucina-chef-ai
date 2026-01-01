@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Conversation, Message } from '../types/chat';
 import { parseRecipeFromText } from '../utils/recipeParser';
-import { generateQuickReplies } from '../utils/quickReplies';
+import { generateQuickReplies, type QuickReplyContext } from '../utils/quickReplies';
 import { authFetch } from './useAuth';
 
 function generateId(): string {
@@ -159,20 +159,13 @@ export function useConversations(token: string | null) {
     const targetId = conversationId || activeId;
     const msgId = generateId();
 
-    // For user messages, parse recipe/quick replies immediately
-    // For assistant messages during streaming, these will be added by finalizeMessage
-    const parsedRecipe = role === 'user' ? undefined :
-      (content ? parseRecipeFromText(content) ?? undefined : undefined);
-    const quickReplies = role === 'user' ? undefined :
-      (content ? generateQuickReplies(content, parsedRecipe || null) : undefined);
-
+    // For assistant messages, recipe/quickReplies will be added by finalizeMessage
+    // after streaming is complete (with proper context)
     const newMessage: Message = {
       id: msgId,
       role,
       content,
       timestamp: Date.now(),
-      parsedRecipe,
-      quickReplies,
     };
 
     setConversations(prev => {
@@ -223,6 +216,7 @@ export function useConversations(token: string | null) {
 
   // Finalize message after streaming (parse recipe + quick replies)
   // If toolRecipe is provided (from tool use), use that instead of parsing from text
+  // quickReplyContext allows passing language and special modes for contextual replies
   const finalizeMessage = useCallback((
     messageId: string,
     content: string,
@@ -236,7 +230,8 @@ export function useConversations(token: string | null) {
       ingredients: string[];
       steps: string[];
       tips?: string[];
-    }
+    },
+    quickReplyContext?: Omit<QuickReplyContext, 'response' | 'recipe'>
   ) => {
     const targetId = conversationId || activeId;
 
@@ -254,7 +249,15 @@ export function useConversations(token: string | null) {
         }
       : (parseRecipeFromText(content) ?? undefined);
 
-    const quickReplies = generateQuickReplies(content, parsedRecipe || null);
+    // Generate quick replies with context (language, modes)
+    const quickReplies = generateQuickReplies({
+      response: content,
+      recipe: parsedRecipe || null,
+      language: quickReplyContext?.language || 'it',
+      menuMode: quickReplyContext?.menuMode,
+      stellatoMode: quickReplyContext?.stellatoMode,
+      recuperoMode: quickReplyContext?.recuperoMode,
+    });
 
     setConversations(prev => prev.map(conv => {
       if (conv.id === targetId) {

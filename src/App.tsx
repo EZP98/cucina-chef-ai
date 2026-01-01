@@ -648,7 +648,12 @@ export default function App() {
 
       // Finalize message - use tool recipe if available, otherwise parse from text
       if (fullText || toolRecipe) {
-        finalizeMessage(aiMsgId, fullText, convId, toolRecipe || undefined);
+        finalizeMessage(aiMsgId, fullText, convId, toolRecipe || undefined, {
+          language,
+          menuMode,
+          stellatoMode,
+          recuperoMode,
+        });
       } else {
         // Fallback if no text received
         updateMessageContent(aiMsgId, 'Mi dispiace, non ho ricevuto risposta.', convId);

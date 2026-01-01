@@ -506,6 +506,8 @@ export default function App() {
       // Tool use tracking
       let toolUseJson = '';
       let isInToolUse = false;
+      let currentToolName = '';
+      let quickRepliesFromAI: string[] = [];
       let toolRecipe: {
         name: string;
         icon?: string;
@@ -574,9 +576,10 @@ export default function App() {
                   }
                 }
 
-                // Handle tool use start
+                // Handle tool use start - capture tool name
                 if (data.type === 'content_block_start' && data.content_block?.type === 'tool_use') {
                   isInToolUse = true;
+                  currentToolName = data.content_block.name || '';
                   toolUseJson = '';
                 }
 
@@ -585,17 +588,20 @@ export default function App() {
                   toolUseJson += data.delta.partial_json || '';
                 }
 
-                // Handle tool use stop - parse the recipe
+                // Handle tool use stop - parse based on tool name
                 if (data.type === 'content_block_stop' && isInToolUse) {
                   isInToolUse = false;
                   try {
                     const parsed = JSON.parse(toolUseJson);
-                    if (parsed.name && parsed.ingredients && parsed.steps) {
+                    if (currentToolName === 'display_recipe' && parsed.name && parsed.ingredients && parsed.steps) {
                       toolRecipe = parsed;
+                    } else if (currentToolName === 'suggest_quick_replies' && parsed.replies && Array.isArray(parsed.replies)) {
+                      quickRepliesFromAI = parsed.replies.slice(0, 4);
                     }
                   } catch (e) {
                     console.error('Failed to parse tool use JSON:', e);
                   }
+                  currentToolName = '';
                 }
               } catch {
                 // Skip non-JSON lines
@@ -647,13 +653,16 @@ export default function App() {
       }
 
       // Finalize message - use tool recipe if available, otherwise parse from text
+      // Pass AI-generated quick replies if available
       if (fullText || toolRecipe) {
-        finalizeMessage(aiMsgId, fullText, convId, toolRecipe || undefined, {
-          language,
-          menuMode,
-          stellatoMode,
-          recuperoMode,
-        });
+        finalizeMessage(
+          aiMsgId,
+          fullText,
+          convId,
+          toolRecipe || undefined,
+          { language, menuMode, stellatoMode, recuperoMode },
+          quickRepliesFromAI.length > 0 ? quickRepliesFromAI : undefined
+        );
       } else {
         // Fallback if no text received
         updateMessageContent(aiMsgId, 'Mi dispiace, non ho ricevuto risposta.', convId);

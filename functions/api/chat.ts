@@ -299,6 +299,22 @@ You can still write introductory text, history, and tips as regular text before 
 - For pasta dishes, include the classic sauce/condiment that pairs with it
 </response_style>
 
+<quick_replies_rule>
+MANDATORY: At the end of EVERY response, you MUST call the suggest_quick_replies tool.
+Generate 3-4 short, contextual follow-up suggestions that:
+- Are in the user's interface language (${language === 'zh-TW' ? 'Traditional Chinese' : language === 'ja' ? 'Japanese' : language === 'es' ? 'Spanish' : language === 'fr' ? 'French' : language === 'en' ? 'English' : 'Italian'})
+- Relate directly to what you just discussed
+- Are 2-8 words each
+- Invite natural follow-up questions or actions
+
+Examples by response type:
+- After showing a recipe: "Versione senza glutine?", "Abbinamento vino?", "Come conservare?"
+- After explaining technique: "Errori comuni?", "Attrezzatura necessaria?", "Tempo ideale?"
+- After ingredient info: "Ricette con questo?", "Dove acquistarlo?", "Sostituti?"
+- Stellato mode: "Come impiattare?", "Tocco gourmet?"
+- Recupero mode: "Altri usi per gli avanzi?", "Posso congelare?"
+</quick_replies_rule>
+
 <rules>
 - For recipe requests: brief history → ingredients with notes → numbered steps → classic pairing/sauce → tips and mistakes to avoid
 - For technique questions: explain the method → why it works → common mistakes
@@ -427,6 +443,23 @@ ${perplexityContext}`;
             }
           },
           required: ['name', 'icon', 'ingredients', 'steps']
+        }
+      },
+      {
+        name: 'suggest_quick_replies',
+        description: 'ALWAYS call this at the end of EVERY response. Suggest 3-4 contextual follow-up questions that the user might want to ask next.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            replies: {
+              type: 'array',
+              items: { type: 'string' },
+              maxItems: 4,
+              minItems: 2,
+              description: 'Short follow-up suggestions (2-8 words each). Must be in the user interface language. Should relate to what was just discussed and invite natural next questions.'
+            }
+          },
+          required: ['replies']
         }
       }
     ];

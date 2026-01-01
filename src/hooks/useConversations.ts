@@ -216,7 +216,7 @@ export function useConversations(token: string | null) {
 
   // Finalize message after streaming (parse recipe + quick replies)
   // If toolRecipe is provided (from tool use), use that instead of parsing from text
-  // quickReplyContext allows passing language and special modes for contextual replies
+  // aiQuickReplies: if AI generated quick replies via tool, use those; otherwise fallback to local generation
   const finalizeMessage = useCallback((
     messageId: string,
     content: string,
@@ -231,7 +231,8 @@ export function useConversations(token: string | null) {
       steps: string[];
       tips?: string[];
     },
-    quickReplyContext?: Omit<QuickReplyContext, 'response' | 'recipe'>
+    quickReplyContext?: Omit<QuickReplyContext, 'response' | 'recipe'>,
+    aiQuickReplies?: string[]
   ) => {
     const targetId = conversationId || activeId;
 
@@ -249,15 +250,17 @@ export function useConversations(token: string | null) {
         }
       : (parseRecipeFromText(content) ?? undefined);
 
-    // Generate quick replies with context (language, modes)
-    const quickReplies = generateQuickReplies({
-      response: content,
-      recipe: parsedRecipe || null,
-      language: quickReplyContext?.language || 'it',
-      menuMode: quickReplyContext?.menuMode,
-      stellatoMode: quickReplyContext?.stellatoMode,
-      recuperoMode: quickReplyContext?.recuperoMode,
-    });
+    // Use AI-generated quick replies if available, otherwise fallback to local generation
+    const quickReplies = aiQuickReplies && aiQuickReplies.length > 0
+      ? aiQuickReplies
+      : generateQuickReplies({
+          response: content,
+          recipe: parsedRecipe || null,
+          language: quickReplyContext?.language || 'it',
+          menuMode: quickReplyContext?.menuMode,
+          stellatoMode: quickReplyContext?.stellatoMode,
+          recuperoMode: quickReplyContext?.recuperoMode,
+        });
 
     setConversations(prev => prev.map(conv => {
       if (conv.id === targetId) {

@@ -20,7 +20,7 @@ interface LogoProps {
   color?: string;
 }
 
-// Main logo: Egg with horizontal zigzag crack
+// Main logo: Egg with horizontal zigzag line
 export const GustoLogo = ({ size = 48, color = tokens.colors.ink }: LogoProps) => (
   <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
     {/* Egg shape */}
@@ -31,11 +31,11 @@ export const GustoLogo = ({ size = 48, color = tokens.colors.ink }: LogoProps) =
       ry="18"
       stroke={color}
       strokeWidth="1.5"
-      fill="none"
+      fill={tokens.colors.paper}
     />
-    {/* Diagonal zigzag crack pointing UP */}
+    {/* Horizontal zigzag decoration */}
     <path
-      d="M16 32 L20 28 L24 31 L28 27 L32 23"
+      d="M10 30 L14 26 L18 29 L22 25 L26 28 L30 24 L34 27 L38 22"
       stroke={color}
       strokeWidth="1.3"
       strokeLinecap="round"
@@ -73,7 +73,7 @@ export const GustoLogoOutline = ({ size = 48, color = tokens.colors.paper }: Log
       fill="none"
     />
     <path
-      d="M16 32 L20 28 L24 31 L28 27 L32 23"
+      d="M10 30 L14 26 L18 29 L22 25 L26 28 L30 24 L34 27 L38 22"
       stroke={color}
       strokeWidth="1.3"
       strokeLinecap="round"
@@ -108,8 +108,8 @@ export const GustoLogoAnimated = ({ size = 48, color = tokens.colors.ink }: Logo
           transform-origin: center;
         }
         .gusto-logo-animated path {
-          stroke-dasharray: 40;
-          stroke-dashoffset: 40;
+          stroke-dasharray: 60;
+          stroke-dashoffset: 60;
           animation: crackDraw 2s ease-out forwards;
         }
         @keyframes eggWiggle {
@@ -129,10 +129,10 @@ export const GustoLogoAnimated = ({ size = 48, color = tokens.colors.ink }: Logo
       ry="18"
       stroke={color}
       strokeWidth="1.5"
-      fill="none"
+      fill={tokens.colors.paper}
     />
     <path
-      d="M16 32 L20 28 L24 31 L28 27 L32 23"
+      d="M10 30 L14 26 L18 29 L22 25 L26 28 L30 24 L34 27 L38 22"
       stroke={color}
       strokeWidth="1.3"
       strokeLinecap="round"

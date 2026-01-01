@@ -1,5 +1,9 @@
 // Cloudflare Pages Function for Gusto Chat with RAG + Perplexity
 
+// Import from shared (single source of truth)
+import { RECIPE_CATEGORY_KEYS, RECIPE_CATEGORY_META } from '../../shared/recipeCategories';
+import { RECIPE_ICONS, RECIPE_ICON_META } from '../../shared/recipeIcons';
+
 interface Env {
   ANTHROPIC_API_KEY: string;
   PERPLEXITY_API_KEY: string;
@@ -386,6 +390,18 @@ ${perplexityContext}`;
               type: 'string',
               description: 'The name of the recipe'
             },
+            // Icon selection - AI picks the most specific icon for this dish
+            icon: {
+              type: 'string',
+              enum: [...RECIPE_ICONS],
+              description: `Choose the most specific icon for this dish. Examples: Spaghetti (for pasta lunga), Risotto (for risotti), PizzaMargherita (for pizze), Pandoro/Panettone (dolci natalizi), Tortellini (pasta ripiena), Gambero (piatti di mare), etc. Pick the icon that best represents the main ingredient or dish type.`
+            },
+            // Keep category for backwards compatibility
+            category: {
+              type: 'string',
+              enum: [...RECIPE_CATEGORY_KEYS],
+              description: `Fallback category: ${RECIPE_CATEGORY_KEYS.join(', ')}`
+            },
             time: {
               type: 'string',
               description: 'Total preparation/cooking time (e.g., "30 minuti", "1 ora")'
@@ -410,7 +426,7 @@ ${perplexityContext}`;
               description: 'Optional tips and suggestions'
             }
           },
-          required: ['name', 'ingredients', 'steps']
+          required: ['name', 'icon', 'ingredients', 'steps']
         }
       }
     ];

@@ -137,7 +137,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       const timestamp = msg.timestamp || now;
 
       await env.DB.prepare(
-        'INSERT INTO messages (id, conversation_id, role, content, timestamp, parsed_recipe, quick_replies) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT OR REPLACE INTO messages (id, conversation_id, role, content, timestamp, parsed_recipe, quick_replies) VALUES (?, ?, ?, ?, ?, ?, ?)'
       ).bind(
         messageId,
         conversationId,

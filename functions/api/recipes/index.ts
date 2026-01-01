@@ -22,6 +22,7 @@ interface Recipe {
   steps: string;
   note: string | null;
   is_favorite: number;
+  icon_svg: string | null;
   created_at: number;
 }
 
@@ -50,7 +51,8 @@ async function verifyJWT(token: string, secret: string): Promise<JWTPayload | nu
 
     const payload = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/'))) as JWTPayload;
 
-    if (payload.exp && payload.exp < Date.now()) return null;
+    // exp is in seconds, Date.now() is in milliseconds
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return null;
 
     return payload;
   } catch {
@@ -89,6 +91,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       steps: JSON.parse(r.steps),
       note: r.note,
       isFavorite: r.is_favorite === 1,
+      iconSvg: r.icon_svg,
       createdAt: r.created_at,
     }));
 
@@ -120,6 +123,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       ingredients: string[];
       steps: string[];
       note?: string;
+      iconSvg?: string;
     };
 
     if (!body.name || !body.ingredients || !body.steps) {
@@ -130,8 +134,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const now = Date.now();
 
     await context.env.DB.prepare(`
-      INSERT INTO recipes (id, user_id, name, time, servings, ingredients, steps, note, is_favorite, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+      INSERT INTO recipes (id, user_id, name, time, servings, ingredients, steps, note, is_favorite, icon_svg, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
     `).bind(
       id,
       payload.sub,
@@ -141,6 +145,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       JSON.stringify(body.ingredients),
       JSON.stringify(body.steps),
       body.note || null,
+      body.iconSvg || null,
       now
     ).run();
 
@@ -153,6 +158,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       steps: body.steps,
       note: body.note || null,
       isFavorite: false,
+      iconSvg: body.iconSvg || null,
       createdAt: now,
     };
 

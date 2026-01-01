@@ -25,8 +25,11 @@ const baseProps = {
 
 export const SketchEgg = ({ size = 48 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
-    <ellipse cx="24" cy="26" rx="12" ry="16" {...baseProps} fill={COLORS.fill} />
-    <ellipse cx="24" cy="28" rx="6" ry="8" {...baseProps} strokeWidth="1" />
+    <ellipse cx="24" cy="26" rx="14" ry="18" {...baseProps} fill={COLORS.fill} />
+    <path
+      d="M10 30 L14 26 L18 29 L22 25 L26 28 L30 24 L34 27 L38 22"
+      {...baseProps} strokeWidth="1.3" fill="none"
+    />
   </svg>
 );
 

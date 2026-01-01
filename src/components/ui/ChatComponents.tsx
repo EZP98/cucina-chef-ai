@@ -5,24 +5,8 @@
 
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
-import type { RecipeCategory } from '../../types/chat';
-import {
-  SketchEgg,
-  SketchPasta,
-  SketchFish,
-  SketchSoup,
-  SketchSalad,
-  SketchBread,
-  SketchPizza,
-  SketchIceCream,
-  SketchCheese,
-  SketchCarrot,
-  SketchLemon,
-  SketchWine,
-  SketchOil,
-  SketchBowl,
-  SketchChicken,
-} from './SketchIllustrations';
+import { RECIPE_CATEGORIES, type RecipeCategory } from '../../config/recipeCategories';
+import { getRecipeIcon, hasRecipeIcon } from '../../config/recipeIcons';
 
 // ============================================
 // 🎨 DESIGN TOKENS
@@ -70,27 +54,13 @@ export const Brace = ({ height = 40 }: { height?: number }) => (
 
 // ============================================
 // 🍳 FOOD ICONS
-// Keys must match RecipeCategory from types/chat.ts
+// Derived from RECIPE_CATEGORIES config (single source of truth)
 // ============================================
 
-// Use icons from SketchIllustrations - professional hand-drawn icons
-export const FoodIcons: Record<RecipeCategory, React.FC<{ size?: number }>> = {
-  egg: SketchEgg,
-  pasta: SketchPasta,
-  meat: SketchChicken,
-  fish: SketchFish,
-  soup: SketchSoup,
-  salad: SketchSalad,
-  bread: SketchBread,
-  pizza: SketchPizza,
-  dessert: SketchIceCream,
-  cheese: SketchCheese,
-  vegetable: SketchCarrot,
-  fruit: SketchLemon,
-  drink: SketchWine,
-  sauce: SketchOil,
-  bowl: SketchBowl,
-};
+// Build FoodIcons from config
+export const FoodIcons = Object.fromEntries(
+  Object.entries(RECIPE_CATEGORIES).map(([key, value]) => [key, value.icon])
+) as Record<RecipeCategory, React.FC<{ size?: number }>>;
 
 // ============================================
 // 📦 BOX COMPONENTS
@@ -511,7 +481,8 @@ interface RecipeHeaderProps {
   time?: string;
   difficulty?: string;
   servings?: number | string;
-  category?: RecipeCategory; // Recipe category for icon selection
+  icon?: string; // New: AI-selected specific icon (e.g., "Spaghetti", "Risotto")
+  category?: RecipeCategory; // Legacy: fallback category for icon selection
   iconSvg?: string;  // Deprecated: kept for backwards compatibility
 }
 
@@ -524,17 +495,29 @@ export const RecipeHeader: React.FC<RecipeHeaderProps> = ({
   time,
   difficulty,
   servings,
+  icon,
   category,
   iconSvg,
 }) => {
-  // Priority: category-based icon > legacy iconSvg > default bowl
-  const IconComponent = category ? FoodIcons[category] : FoodIcons.bowl;
+  // Priority: AI-selected icon > category-based icon > legacy iconSvg > default bowl
+  const getIcon = () => {
+    if (icon && hasRecipeIcon(icon)) {
+      return getRecipeIcon(icon);
+    }
+    if (category && FoodIcons[category]) {
+      return FoodIcons[category];
+    }
+    return FoodIcons.bowl;
+  };
+  const IconComponent = getIcon();
 
   return (
     <div style={{ marginBottom: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
-        {/* Use category-based icon, fall back to iconSvg for old saved recipes */}
-        {category ? (
+        {/* Priority: AI icon > category icon > legacy iconSvg > default */}
+        {icon && hasRecipeIcon(icon) ? (
+          <IconComponent size={48} />
+        ) : category ? (
           <IconComponent size={48} />
         ) : iconSvg ? (
           <div
@@ -841,7 +824,8 @@ export const RecipeNote: React.FC<MessageProps> = ({ children }) => (
 // ============================================
 
 interface RecipeDetailProps {
-  category?: RecipeCategory;  // Recipe category for icon selection
+  icon?: string; // New: AI-selected specific icon (e.g., "Spaghetti", "Risotto")
+  category?: RecipeCategory;  // Legacy: fallback category for icon selection
   iconSvg?: string;   // Deprecated: kept for backwards compatibility
   title: string;
   description?: string;
@@ -859,6 +843,7 @@ interface RecipeDetailProps {
  * Ricetta completa - tutto insieme
  */
 export const RecipeDetail: React.FC<RecipeDetailProps> = ({
+  icon,
   category,
   iconSvg,
   title,
@@ -874,6 +859,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
 }) => (
   <div>
     <RecipeHeader
+      icon={icon}
       category={category}
       iconSvg={iconSvg}
       title={title}

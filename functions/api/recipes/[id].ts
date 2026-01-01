@@ -50,7 +50,8 @@ async function verifyJWT(token: string, secret: string): Promise<JWTPayload | nu
 
     const payload = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/'))) as JWTPayload;
 
-    if (payload.exp && payload.exp < Date.now()) return null;
+    // exp is in seconds, Date.now() is in milliseconds
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return null;
 
     return payload;
   } catch {

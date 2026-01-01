@@ -11,6 +11,7 @@ export interface SavedRecipe {
   steps: string[];
   note?: string;
   isFavorite: boolean;
+  iconSvg?: string;
   createdAt: number;
 }
 
@@ -33,8 +34,10 @@ export function useRecipes(token: string | null): UseRecipesReturn {
 
   // Fetch all recipes from API
   const refreshRecipes = useCallback(async () => {
-    if (!token) {
+    // Don't fetch if no valid token
+    if (!token || token.trim() === '') {
       setRecipes([]);
+      setIsLoading(false);
       return;
     }
 
@@ -48,6 +51,12 @@ export function useRecipes(token: string | null): UseRecipesReturn {
         },
       });
 
+      if (response.status === 401) {
+        // Token invalid or expired - just return empty
+        setRecipes([]);
+        return;
+      }
+
       if (!response.ok) {
         throw new Error('Errore nel caricamento delle ricette');
       }
@@ -57,6 +66,7 @@ export function useRecipes(token: string | null): UseRecipesReturn {
     } catch (err) {
       console.error('Fetch recipes error:', err);
       setError(err instanceof Error ? err.message : 'Errore sconosciuto');
+      setRecipes([]); // Ensure recipes is always an array on error
     } finally {
       setIsLoading(false);
     }
@@ -67,6 +77,22 @@ export function useRecipes(token: string | null): UseRecipesReturn {
     refreshRecipes();
   }, [refreshRecipes]);
 
+  // Generate SVG icon for a recipe
+  const generateIcon = async (name: string, ingredients: string[]): Promise<string | null> => {
+    try {
+      const response = await fetch('/api/generate-icon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipeName: name, ingredients }),
+      });
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data.svg || null;
+    } catch {
+      return null;
+    }
+  };
+
   // Save a new recipe
   const saveRecipe = useCallback(async (
     recipe: Omit<SavedRecipe, 'id' | 'isFavorite' | 'createdAt'>
@@ -74,13 +100,19 @@ export function useRecipes(token: string | null): UseRecipesReturn {
     if (!token) return null;
 
     try {
+      // Generate icon SVG (non-blocking - don't fail if it doesn't work)
+      const iconSvg = await generateIcon(recipe.name, recipe.ingredients);
+
       const response = await fetch('/api/recipes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(recipe),
+        body: JSON.stringify({
+          ...recipe,
+          iconSvg,
+        }),
       });
 
       if (!response.ok) {

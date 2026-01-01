@@ -68,6 +68,10 @@ export const translations: Record<Language, Record<string, string>> = {
     'recipes.saved': 'Salvata nel ricettario',
     'recipes.save': 'Salva nel ricettario',
 
+    // Recipe detail
+    'recipe.ingredients': 'ingredienti',
+    'recipe.steps': 'preparazione',
+
     // Pantry
     'pantry.takePhoto': 'Scatta una foto',
     'pantry.analyzing': 'Analizzo la foto...',
@@ -163,6 +167,10 @@ export const translations: Record<Language, Record<string, string>> = {
     'recipes.saved': 'Saved to cookbook',
     'recipes.save': 'Save to cookbook',
 
+    // Recipe detail
+    'recipe.ingredients': 'ingredients',
+    'recipe.steps': 'preparation',
+
     'pantry.takePhoto': 'Take a photo',
     'pantry.analyzing': 'Analyzing photo...',
     'pantry.aiRecognizes': 'AI automatically recognizes ingredients',
@@ -253,6 +261,10 @@ export const translations: Record<Language, Record<string, string>> = {
     'recipes.loginRequired': '登入以儲存食譜',
     'recipes.saved': '已儲存到食譜本',
     'recipes.save': '儲存到食譜本',
+
+    // Recipe detail
+    'recipe.ingredients': '食材',
+    'recipe.steps': '做法',
 
     'pantry.takePhoto': '拍照',
     'pantry.analyzing': '分析照片中...',
@@ -345,6 +357,10 @@ export const translations: Record<Language, Record<string, string>> = {
     'recipes.saved': 'Sauvegardée dans le livre de recettes',
     'recipes.save': 'Sauvegarder dans le livre de recettes',
 
+    // Recipe detail
+    'recipe.ingredients': 'ingrédients',
+    'recipe.steps': 'préparation',
+
     'pantry.takePhoto': 'Prends une photo',
     'pantry.analyzing': 'Analyse en cours...',
     'pantry.aiRecognizes': 'L\'IA reconnaît les ingrédients automatiquement',
@@ -436,6 +452,10 @@ export const translations: Record<Language, Record<string, string>> = {
     'recipes.saved': 'レシピブックに保存済み',
     'recipes.save': 'レシピブックに保存',
 
+    // Recipe detail
+    'recipe.ingredients': '材料',
+    'recipe.steps': '作り方',
+
     'pantry.takePhoto': '写真を撮る',
     'pantry.analyzing': '写真を分析中...',
     'pantry.aiRecognizes': 'AIが自動で食材を認識',
@@ -526,6 +546,10 @@ export const translations: Record<Language, Record<string, string>> = {
     'recipes.loginRequired': 'Inicia sesión para guardar recetas',
     'recipes.saved': 'Guardada en el recetario',
     'recipes.save': 'Guardar en el recetario',
+
+    // Recipe detail
+    'recipe.ingredients': 'ingredientes',
+    'recipe.steps': 'preparación',
 
     'pantry.takePhoto': 'Toma una foto',
     'pantry.analyzing': 'Analizando foto...',

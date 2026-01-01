@@ -438,19 +438,20 @@ interface ZineRecipeCardProps {
   note?: string;
   time?: string;
   Illustration?: React.ComponentType<IllustrationProps>;
+  iconSvg?: string;
   annotations?: string[];
   onClick?: () => void;
   style?: React.CSSProperties;
 }
 
-export const ZineRecipeCard = ({ title, note, time, Illustration, annotations = [], onClick, style = {} }: ZineRecipeCardProps) => (
+export const ZineRecipeCard = ({ title, note, time, Illustration, iconSvg, annotations = [], onClick, style = {} }: ZineRecipeCardProps) => (
   <div
     style={{ position: 'relative', marginBottom: '24px', cursor: onClick ? 'pointer' : 'default', ...style }}
     onClick={onClick}
   >
     <HandDrawnFrame>
       <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-        {Illustration && (
+        {(Illustration || iconSvg) && (
           <div style={{
             width: '80px',
             height: '80px',
@@ -459,7 +460,14 @@ export const ZineRecipeCard = ({ title, note, time, Illustration, annotations = 
             justifyContent: 'center',
             flexShrink: 0
           }}>
-            <Illustration size={64} />
+            {iconSvg ? (
+              <div
+                dangerouslySetInnerHTML={{ __html: iconSvg }}
+                style={{ width: 64, height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              />
+            ) : Illustration ? (
+              <Illustration size={64} />
+            ) : null}
           </div>
         )}
 
@@ -597,25 +605,32 @@ export const ZineChecklist = ({ items = [], onToggle, style = {} }: ZineChecklis
 // Photo card con polaroid effect sketch
 interface ZinePhotoCardProps {
   Illustration?: React.ComponentType<{ size?: number }>;
+  iconSvg?: string;
   caption?: string;
   note?: string;
   rotation?: number;
   style?: React.CSSProperties;
 }
 
-export const ZinePhotoCard = ({ Illustration, caption, note, rotation = 0, style = {} }: ZinePhotoCardProps) => (
+export const ZinePhotoCard = ({ Illustration, iconSvg, caption, note, rotation = 0, style = {} }: ZinePhotoCardProps) => (
   <div style={{ display: 'inline-block', transform: `rotate(${rotation}deg)`, flexShrink: 0, ...style }}>
     <DoubleFrame style={{ background: '#FAF7F2', padding: '12px' }}>
       <div style={{
         width: '100px',
         height: '100px',
-        background: '#F0EBE3',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: '8px'
       }}>
-        {Illustration && <Illustration size={64} />}
+        {iconSvg ? (
+          <div
+            dangerouslySetInnerHTML={{ __html: iconSvg }}
+            style={{ width: 64, height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          />
+        ) : Illustration ? (
+          <Illustration size={64} />
+        ) : null}
       </div>
       {caption && (
         <ZineText size="sm" style={{ display: 'block', textAlign: 'center' }}>

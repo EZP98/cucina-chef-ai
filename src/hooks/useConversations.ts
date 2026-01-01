@@ -1,6 +1,6 @@
 // useConversations Hook - Manages chat conversations with cloud DB only (no localStorage)
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Conversation, Message } from '../types/chat';
 import { parseRecipeFromText } from '../utils/recipeParser';
 import { generateQuickReplies } from '../utils/quickReplies';
@@ -21,6 +21,12 @@ export function useConversations(token: string | null) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // Ref to always have current conversations (avoids stale closure)
+  const conversationsRef = useRef<Conversation[]>(conversations);
+  useEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
+
   // Load from cloud on mount when authenticated
   useEffect(() => {
     if (!token) {
@@ -38,7 +44,12 @@ export function useConversations(token: string | null) {
         if (response.ok) {
           const data = await response.json();
           if (data.conversations && Array.isArray(data.conversations)) {
-            setConversations(data.conversations);
+            // Ensure each conversation has a messages array
+            const validConvs = data.conversations.map((c: Conversation) => ({
+              ...c,
+              messages: c.messages || []
+            }));
+            setConversations(validConvs);
           }
         }
       } catch (e) {
@@ -52,6 +63,35 @@ export function useConversations(token: string | null) {
 
   // Get active conversation
   const activeConversation = conversations.find(c => c.id === activeId) || null;
+
+  // Track which conversations have been loaded
+  const [loadedConvIds, setLoadedConvIds] = useState<Set<string>>(new Set());
+
+  // Load messages when activeId changes (if not already loaded)
+  useEffect(() => {
+    if (!token || !activeId) return;
+    if (loadedConvIds.has(activeId)) return; // Already loaded
+
+    const loadMessages = async () => {
+      try {
+        const response = await authFetch(`/api/conversations/${activeId}/messages`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.messages && Array.isArray(data.messages)) {
+            setConversations(prev => prev.map(c =>
+              c.id === activeId
+                ? { ...c, messages: data.messages }
+                : c
+            ));
+            setLoadedConvIds(prev => new Set(prev).add(activeId));
+          }
+        }
+      } catch (e) {
+        console.error('Error loading messages:', e);
+      }
+    };
+    loadMessages();
+  }, [token, activeId, loadedConvIds]);
 
   // Create a new conversation (also saves to cloud)
   const createConversation = useCallback(async (): Promise<string> => {
@@ -189,6 +229,8 @@ export function useConversations(token: string | null) {
     conversationId?: string,
     toolRecipe?: {
       name: string;
+      icon?: string;
+      category?: string;
       time?: string;
       servings?: string;
       ingredients: string[];
@@ -202,6 +244,8 @@ export function useConversations(token: string | null) {
     const parsedRecipe = toolRecipe
       ? {
           name: toolRecipe.name,
+          icon: toolRecipe.icon,
+          category: toolRecipe.category as import('../types/chat').RecipeCategory | undefined,
           time: toolRecipe.time,
           servings: toolRecipe.servings,
           ingredients: toolRecipe.ingredients,
@@ -222,6 +266,28 @@ export function useConversations(token: string | null) {
               : msg
           ),
           updatedAt: Date.now(),
+        };
+      }
+      return conv;
+    }));
+  }, [activeId]);
+
+  // Update message icon SVG (for recipe icons generated in background)
+  const updateMessageIconSvg = useCallback((
+    messageId: string,
+    iconSvg: string,
+    conversationId?: string
+  ) => {
+    const targetId = conversationId || activeId;
+    setConversations(prev => prev.map(conv => {
+      if (conv.id === targetId) {
+        return {
+          ...conv,
+          messages: conv.messages.map(msg =>
+            msg.id === messageId && msg.parsedRecipe
+              ? { ...msg, parsedRecipe: { ...msg.parsedRecipe, iconSvg } }
+              : msg
+          ),
         };
       }
       return conv;
@@ -249,7 +315,8 @@ export function useConversations(token: string | null) {
   const saveConversationToCloud = useCallback(async (conversationId: string) => {
     if (!token) return;
 
-    const conv = conversations.find(c => c.id === conversationId);
+    // Use ref to get current conversations (avoids stale closure)
+    const conv = conversationsRef.current.find(c => c.id === conversationId);
     if (!conv || conv.messages.length === 0) return;
 
     try {
@@ -282,7 +349,7 @@ export function useConversations(token: string | null) {
     } catch (e) {
       console.error('Error saving to cloud:', e);
     }
-  }, [conversations, token]);
+  }, [token]);
 
   return {
     conversations,
@@ -296,6 +363,7 @@ export function useConversations(token: string | null) {
     addMessage,
     updateMessageContent,
     finalizeMessage,
+    updateMessageIconSvg,
     getHistoryForApi,
     clearAll,
     saveConversationToCloud,

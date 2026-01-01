@@ -22,15 +22,18 @@ import {
 } from './components/ui/ChatComponents';
 import { useConversations } from './hooks/useConversations';
 import { useAuth } from './hooks/useAuth';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { useRecipes } from './hooks/useRecipes';
 import { usePantry } from './hooks/usePantry';
 import { AuthModal } from './components/auth/AuthModal';
 import { UserMenu, LoginButton } from './components/auth/UserMenu';
 import { useI18nStandalone } from './hooks/useI18n';
 import { LanguageSelector } from './components/ui/LanguageSelector';
+import { formatInlineText } from './components/ui/FormattedMessage';
 import { getInitialQuickReplies } from './utils/quickReplies';
 import { extractIntroText } from './utils/recipeParser';
 import { shareRecipe } from './utils/share';
+import { SharePage } from './pages/SharePage';
 import {
   SketchEgg,
   SketchTomato,
@@ -43,6 +46,12 @@ import {
   SketchMilk,
   SketchCarrot
 } from './components/ui/SketchIllustrations';
+import {
+  IconChat,
+  IconRicette,
+  IconDispensa,
+  IconCamera
+} from './components/ui/GustoIcons';
 
 // Hamburger Icon
 const HamburgerIcon = () => (
@@ -58,46 +67,26 @@ const CloseIcon = () => (
   </svg>
 );
 
-// Nav Icons
+// Nav Icons - using GustoIcons with active state
 const NavChat = ({ active }: { active: boolean }) => (
-  <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke={active ? "#2D2A26" : "#A8A4A0"} strokeWidth="1.5">
-    <path d="M4 6Q4 4 6 4H20Q22 4 22 6V16Q22 18 20 18H10L4 22V6Z" strokeLinecap="round"/>
-    <path d="M8 10H18M8 14H14" strokeLinecap="round"/>
-  </svg>
+  <IconChat size={26} color={active ? "#2D2A26" : "#A8A4A0"} fill={active ? "#FAF7F2" : "transparent"} />
 );
 
 const NavBook = ({ active }: { active: boolean }) => (
-  <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke={active ? "#2D2A26" : "#A8A4A0"} strokeWidth="1.5">
-    <path d="M4 4H11Q13 4 13 6V22Q13 20 11 20H4V4Z" strokeLinecap="round"/>
-    <path d="M22 4H15Q13 4 13 6V22Q13 20 15 20H22V4Z" strokeLinecap="round"/>
-  </svg>
+  <IconRicette size={26} color={active ? "#2D2A26" : "#A8A4A0"} fill={active ? "#FAF7F2" : "transparent"} />
 );
 
 const NavPantry = ({ active }: { active: boolean }) => (
-  <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke={active ? "#2D2A26" : "#A8A4A0"} strokeWidth="1.5">
-    {/* Scaffali dispensa */}
-    <rect x="3" y="3" width="20" height="20" rx="1"/>
-    <path d="M3 10H23M3 17H23"/>
-    <circle cx="8" cy="6.5" r="1.5"/>
-    <circle cx="14" cy="6.5" r="1.5"/>
-    <rect x="6" y="12" width="4" height="3" rx="0.5"/>
-    <rect x="12" cy="12" width="4" height="3" rx="0.5"/>
-    <circle cx="9" cy="20" r="1.5"/>
-    <circle cx="16" cy="20" r="1.5"/>
-  </svg>
+  <IconDispensa size={26} color={active ? "#2D2A26" : "#A8A4A0"} fill={active ? "#FAF7F2" : "transparent"} />
 );
 
-// Camera Icon
+// Camera Icon - wrapper for consistent styling
 const CameraIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-    <rect x="2" y="6" width="20" height="14" rx="2"/>
-    <circle cx="12" cy="13" r="4"/>
-    <path d="M7 6V4.5C7 4.22 7.22 4 7.5 4H16.5C16.78 4 17 4.22 17 4.5V6"/>
-  </svg>
+  <IconCamera size={24} color="currentColor" fill="transparent" />
 );
 
 // Types
-type Screen = 'home' | 'chat' | 'recipes' | 'pantry';
+type Screen = 'home' | 'chat' | 'recipes' | 'pantry' | 'share';
 
 // UI representation of pantry item (includes illustration component)
 interface PantryItemUI {
@@ -121,25 +110,24 @@ function useIsMobile() {
   return isMobile;
 }
 
-// Hook per hash-based routing
-function useHashRouter() {
+// Hook per history-based routing (URL puliti senza #)
+function useRouter() {
   const [route, setRoute] = useState(() => {
-    const hash = window.location.hash.slice(1) || '/';
-    return hash;
+    return window.location.pathname || '/';
   });
 
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.slice(1) || '/';
-      setRoute(hash);
+    const handlePopState = () => {
+      setRoute(window.location.pathname || '/');
     };
 
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   const navigate = (path: string) => {
-    window.location.hash = path;
+    window.history.pushState(null, '', path);
+    setRoute(path);
   };
 
   // Parse route to get screen and optional ID
@@ -162,6 +150,10 @@ function useHashRouter() {
       return { screen: 'pantry' };
     }
 
+    if (parts[0] === 'share') {
+      return { screen: 'share', id: parts[1] };
+    }
+
     return { screen: 'home' };
   };
 
@@ -172,24 +164,29 @@ function useHashRouter() {
 
 export default function App() {
   const isMobile = useIsMobile();
-  const { screen, routeId, navigate } = useHashRouter();
+  const { screen, routeId, navigate } = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const isOnline = useOnlineStatus();
 
   // Auth hook
   const { user, token, isAuthenticated, login, register, logout } = useAuth();
 
   // Recipes hook
   const {
-    recipes: savedRecipes,
-    favorites: favoriteRecipes,
+    recipes: savedRecipesRaw,
+    favorites: favoriteRecipesRaw,
     saveRecipe,
     deleteRecipe,
     toggleFavorite: toggleRecipeFavorite,
     isRecipeSaved,
   } = useRecipes(token);
+
+  // Ensure recipes are always arrays (defensive against undefined)
+  const savedRecipes = savedRecipesRaw || [];
+  const favoriteRecipes = favoriteRecipesRaw || [];
 
   // State for tracking which recipe is being saved
   const [savingRecipeId, setSavingRecipeId] = useState<string | null>(null);
@@ -228,23 +225,35 @@ export default function App() {
     saveConversationToCloud,
   } = useConversations(token);
 
-  // Sync URL with active conversation
+  // Sync URL → State: when URL has conversation ID, update state
   useEffect(() => {
     if (screen === 'chat' && routeId && routeId !== activeId) {
       const conv = conversations.find(c => c.id === routeId);
       if (conv) {
         setActiveConversation(routeId);
+      } else if (conversations.length > 0) {
+        // Conversation not found - redirect to chat list
+        navigate('/chat');
       }
     }
     // If on /chat without ID, clear active conversation
     if (screen === 'chat' && !routeId && activeId) {
       setActiveConversation(null);
     }
-  }, [screen, routeId, conversations, activeId, setActiveConversation]);
+  }, [screen, routeId, conversations, activeId, setActiveConversation, navigate]);
 
   // Select a conversation
   const selectConversation = (convId: string) => {
     navigate(`/chat/${convId}`);
+  };
+
+  // Delete a conversation with navigation
+  const handleDeleteConversation = async (convId: string) => {
+    const wasActive = activeId === convId;
+    await deleteConversation(convId);
+    if (wasActive && screen === 'chat') {
+      navigate('/chat');
+    }
   };
 
   // Simple login/register handlers (conversations auto-load via hook)
@@ -423,6 +432,20 @@ export default function App() {
     const msgToSend = customMessage || message.trim();
     if (!msgToSend || isLoading) return;
 
+    // Check offline status
+    if (!isOnline) {
+      const offlineMsg = {
+        it: 'Sei offline. Controlla la connessione.',
+        en: 'You are offline. Check your connection.',
+        fr: 'Vous êtes hors ligne. Vérifiez votre connexion.',
+        es: 'Estás sin conexión. Comprueba tu conexión.',
+        ja: 'オフラインです。接続を確認してください。',
+        'zh-TW': '您已離線。請檢查網路連線。',
+      }[language] || 'You are offline. Check your connection.';
+      alert(offlineMsg);
+      return;
+    }
+
     // Require authentication to send messages
     if (!isAuthenticated) {
       setAuthModalOpen(true);
@@ -445,6 +468,10 @@ export default function App() {
     // Create empty AI message for streaming
     const aiMsgId = addMessage('assistant', '', convId);
 
+    // Timeout controller (30 seconds)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -458,7 +485,10 @@ export default function App() {
           dietMode: dietMode,
           language: language
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) throw new Error('API error');
 
@@ -478,6 +508,8 @@ export default function App() {
       let isInToolUse = false;
       let toolRecipe: {
         name: string;
+        icon?: string;
+        category?: string;
         time?: string;
         servings?: string;
         ingredients: string[];
@@ -502,11 +534,26 @@ export default function App() {
       };
 
       if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+        // Listen for offline during streaming
+        let wentOffline = false;
+        const offlineHandler = () => {
+          wentOffline = true;
+          controller.abort();
+        };
+        window.addEventListener('offline', offlineHandler);
 
-          buffer += decoder.decode(value, { stream: true });
+        try {
+          while (true) {
+            // Timeout each read (10 seconds of no data = stalled)
+            const readPromise = reader.read();
+            const timeoutPromise = new Promise<{ done: true; value: undefined }>((_, reject) =>
+              setTimeout(() => reject(new Error('Stream timeout')), 10000)
+            );
+
+            const { done, value } = await Promise.race([readPromise, timeoutPromise]);
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
 
           // Process complete SSE events
           const lines = buffer.split('\n');
@@ -555,6 +602,36 @@ export default function App() {
               }
             }
           }
+          } // end while (true)
+        } catch (streamError) {
+          // Handle stream interruption (offline or timeout during streaming)
+          console.error('Stream error:', streamError);
+
+          if (wentOffline) {
+            // Went offline during streaming - show partial + offline message
+            const offlineMsg = {
+              it: '\n\n[Connessione persa. Risposta parziale.]',
+              en: '\n\n[Connection lost. Partial response.]',
+              fr: '\n\n[Connexion perdue. Réponse partielle.]',
+              es: '\n\n[Conexión perdida. Respuesta parcial.]',
+              ja: '\n\n[接続が切断されました。部分的な応答。]',
+              'zh-TW': '\n\n[連線中斷。部分回應。]',
+            }[language] || '\n\n[Connection lost. Partial response.]';
+            fullText += offlineMsg;
+          } else {
+            // Stream timeout - show partial + timeout message
+            const timeoutMsg = {
+              it: '\n\n[Risposta interrotta. Riprova!]',
+              en: '\n\n[Response interrupted. Try again!]',
+              fr: '\n\n[Réponse interrompue. Réessayez!]',
+              es: '\n\n[Respuesta interrumpida. ¡Inténtalo de nuevo!]',
+              ja: '\n\n[応答が中断されました。再試行してください。]',
+              'zh-TW': '\n\n[回應中斷。請重試！]',
+            }[language] || '\n\n[Response interrupted. Try again!]';
+            fullText += timeoutMsg;
+          }
+        } finally {
+          window.removeEventListener('offline', offlineHandler);
         }
 
         // Mark stream as done
@@ -578,12 +655,52 @@ export default function App() {
       }
 
       // Save to cloud if authenticated
+      // Use setTimeout to wait for React state update after finalizeMessage
       if (token) {
-        saveConversationToCloud(convId);
+        setTimeout(() => saveConversationToCloud(convId), 300);
       }
     } catch (error) {
       console.error('Chat error:', error);
-      updateMessageContent(aiMsgId, 'Mi dispiace, c\'è stato un problema. Riprova tra poco!', convId);
+
+      // Multilingual error messages
+      const errorMessages = {
+        generic: {
+          it: 'Mi dispiace, c\'è stato un problema. Riprova tra poco!',
+          en: 'Sorry, there was an issue. Please try again!',
+          fr: 'Désolé, il y a eu un problème. Réessayez bientôt!',
+          es: 'Lo siento, hubo un problema. ¡Inténtalo de nuevo!',
+          ja: '問題が発生しました。もう一度お試しください。',
+          'zh-TW': '抱歉，發生了問題。請稍後再試！',
+        },
+        timeout: {
+          it: 'La richiesta ha impiegato troppo tempo. Riprova!',
+          en: 'The request took too long. Please try again!',
+          fr: 'La requête a pris trop de temps. Réessayez!',
+          es: 'La solicitud tardó demasiado. ¡Inténtalo de nuevo!',
+          ja: 'リクエストに時間がかかりすぎました。再試行してください。',
+          'zh-TW': '請求時間過長。請重試！',
+        },
+        offline: {
+          it: 'Sembra che tu sia offline. Controlla la connessione.',
+          en: 'You appear to be offline. Check your connection.',
+          fr: 'Vous semblez être hors ligne. Vérifiez votre connexion.',
+          es: 'Parece que estás sin conexión. Comprueba tu conexión.',
+          ja: 'オフラインのようです。接続を確認してください。',
+          'zh-TW': '您似乎已離線。請檢查網路連線。',
+        },
+      };
+
+      let errorMsg = errorMessages.generic[language as keyof typeof errorMessages.generic] || errorMessages.generic.en;
+
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          errorMsg = errorMessages.timeout[language as keyof typeof errorMessages.timeout] || errorMessages.timeout.en;
+        } else if (!navigator.onLine) {
+          errorMsg = errorMessages.offline[language as keyof typeof errorMessages.offline] || errorMessages.offline.en;
+        }
+      }
+
+      updateMessageContent(aiMsgId, errorMsg, convId);
     } finally {
       setIsLoading(false);
     }
@@ -605,6 +722,11 @@ export default function App() {
     { id: 'recipes' as Screen, label: t('nav.recipes'), Icon: NavBook },
     { id: 'pantry' as Screen, label: t('nav.pantry'), Icon: NavPantry },
   ];
+
+  // Share page - standalone public view (no auth, no nav)
+  if (screen === 'share' && routeId) {
+    return <SharePage shareId={routeId} onGoToApp={() => navigate('/')} />;
+  }
 
   return (
     <ZinePage style={{ padding: 0, minHeight: '100vh' }}>
@@ -649,7 +771,7 @@ export default function App() {
                   title={conv.title}
                   isActive={conv.id === activeId && screen === 'chat'}
                   onClick={() => selectConversation(conv.id)}
-                  onDelete={() => deleteConversation(conv.id)}
+                  onDelete={() => handleDeleteConversation(conv.id)}
                 />
               ))}
             </div>
@@ -1169,7 +1291,8 @@ export default function App() {
                     title={r.name}
                     note={r.note || ''}
                     time={r.time || ''}
-                    Illustration={SketchBowl}
+                    iconSvg={r.iconSvg}
+                    Illustration={r.iconSvg ? undefined : SketchBowl}
                     annotations={r.isFavorite ? [t('misc.favorite')] : []}
                   />
                 ))}
@@ -1209,7 +1332,7 @@ export default function App() {
           <div style={{
             maxWidth: 600,
             margin: '0 auto',
-            paddingBottom: 100
+            paddingBottom: 220
           }}>
             {/* Show conversation list when no active conversation */}
             {!activeId ? (
@@ -1217,7 +1340,8 @@ export default function App() {
                 {/* New Chat Button */}
                 <button
                   onClick={async () => {
-                    await createConversation();
+                    const newId = await createConversation();
+                    navigate(`/chat/${newId}`);
                   }}
                   style={{
                     width: '100%',
@@ -1328,13 +1452,13 @@ export default function App() {
                             color: tokens.colors.inkFaded,
                             margin: '4px 0 0 0'
                           }}>
-                            {conv.messages.length} {conv.messages.length === 1 ? 'messaggio' : 'messaggi'}
+                            {conv.messages?.length ?? 0} {(conv.messages?.length ?? 0) === 1 ? 'messaggio' : 'messaggi'}
                           </p>
                         </div>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            deleteConversation(conv.id);
+                            handleDeleteConversation(conv.id);
                           }}
                           style={{
                             background: 'none',
@@ -1429,6 +1553,8 @@ export default function App() {
                               title={msg.parsedRecipe.name}
                               time={msg.parsedRecipe.time}
                               servings={msg.parsedRecipe.servings}
+                              category={msg.parsedRecipe.category}
+                              iconSvg={msg.parsedRecipe.iconSvg}
                               ingredients={msg.parsedRecipe.ingredients.map(ing => ({ name: ing }))}
                               steps={msg.parsedRecipe.steps}
                               onSave={isAuthenticated ? async () => {
@@ -1448,6 +1574,7 @@ export default function App() {
                                 servings: msg.parsedRecipe!.servings,
                                 ingredients: msg.parsedRecipe!.ingredients,
                                 steps: msg.parsedRecipe!.steps,
+                                tips: msg.parsedRecipe!.tips,
                               })}
                               isSaved={isRecipeSaved(msg.parsedRecipe.name)}
                               isSaving={savingRecipeId === msg.id}
@@ -1534,12 +1661,12 @@ export default function App() {
                     {t('recipe.ingredients') || 'Ingredienti'}
                   </ZineText>
                   <DashedBox style={{ marginBottom: 24 }}>
-                    {recipe.ingredients.map((ing, i) => (
+                    {(recipe.ingredients || []).map((ing, i) => (
                       <div key={i} style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: 10,
-                        marginBottom: i < recipe.ingredients.length - 1 ? 8 : 0,
+                        marginBottom: i < (recipe.ingredients?.length ?? 0) - 1 ? 8 : 0,
                         fontFamily: tokens.fonts.hand,
                         fontSize: 17,
                         color: tokens.colors.ink,
@@ -1561,7 +1688,7 @@ export default function App() {
                     {t('recipe.steps') || 'Preparazione'}
                   </ZineText>
                   <div style={{ marginBottom: 24 }}>
-                    {recipe.steps.map((step, i) => (
+                    {(recipe.steps || []).map((step, i) => (
                       <div key={i} style={{
                         display: 'flex',
                         gap: 14,
@@ -1590,7 +1717,7 @@ export default function App() {
                           lineHeight: 1.5,
                           flex: 1,
                         }}>
-                          {step}
+                          {formatInlineText(step)}
                         </p>
                       </div>
                     ))}
@@ -1625,8 +1752,8 @@ export default function App() {
                         name: recipe.name,
                         time: recipe.time,
                         servings: recipe.servings,
-                        ingredients: recipe.ingredients,
-                        steps: recipe.steps,
+                        ingredients: recipe.ingredients || [],
+                        steps: recipe.steps || [],
                       })}
                       style={{
                         flex: 1,
@@ -1724,7 +1851,8 @@ export default function App() {
                       {favoriteRecipes.map((r, idx) => (
                         <ZinePhotoCard
                           key={r.id}
-                          Illustration={SketchBowl}
+                          iconSvg={r.iconSvg}
+                          Illustration={r.iconSvg ? undefined : SketchBowl}
                           caption={r.name}
                           note={r.time || ''}
                           rotation={idx % 2 === 0 ? 2 : -2}
@@ -1740,17 +1868,22 @@ export default function App() {
                 </ZineText>
 
                 {savedRecipes.map(r => (
-                  <div key={r.id} style={{ position: 'relative' }}>
+                  <div
+                    key={r.id}
+                    style={{ position: 'relative', cursor: 'pointer' }}
+                    onClick={() => navigate(`/recipes/${r.id}`)}
+                  >
                     <ZineRecipeCard
                       title={r.name}
-                      note={r.note || (r.ingredients.length > 0 ? `${r.ingredients.length} ingredienti` : '')}
+                      note={r.note || ((r.ingredients?.length ?? 0) > 0 ? `${r.ingredients.length} ingredienti` : '')}
                       time={r.time || ''}
-                      Illustration={SketchBowl}
+                      iconSvg={r.iconSvg}
+                      Illustration={r.iconSvg ? undefined : SketchBowl}
                     />
-                    <div style={{ position: 'absolute', top: 20, right: 20, display: 'flex', gap: 8, zIndex: 1 }}>
+                    <div style={{ position: 'absolute', top: 20, right: 20, display: 'flex', gap: 8, zIndex: 2 }}>
                       {/* Favorite button */}
                       <button
-                        onClick={() => toggleRecipeFavorite(r.id)}
+                        onClick={(e) => { e.stopPropagation(); toggleRecipeFavorite(r.id); }}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
                       >
                         <svg width="22" height="22" viewBox="0 0 20 20" fill={r.isFavorite ? "#2D2A26" : "none"}>
@@ -1764,7 +1897,7 @@ export default function App() {
                       </button>
                       {/* Delete button */}
                       <button
-                        onClick={() => deleteRecipe(r.id)}
+                        onClick={(e) => { e.stopPropagation(); deleteRecipe(r.id); }}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
                       >
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#C4C0B9" strokeWidth="1.5">

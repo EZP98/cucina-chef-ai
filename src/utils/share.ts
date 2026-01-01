@@ -1,58 +1,84 @@
-// Share utilities for WhatsApp and native sharing
+// Share utilities - Link-based sharing for WhatsApp and other platforms
 
 const BASE_URL = 'https://gusto-8cx.pages.dev';
 
-export interface ShareData {
-  title?: string;
-  text: string;
-  url?: string;
+export interface RecipeData {
+  name: string;
+  time?: string;
+  servings?: string;
+  ingredients: string[];
+  steps: string[];
+  tips?: string[];
 }
 
 /**
- * Share content using Web Share API (mobile) or WhatsApp fallback
+ * Create a shareable link for a recipe
+ * Saves the recipe to DB and returns the share URL
  */
-export async function shareContent(data: ShareData): Promise<boolean> {
-  const shareText = data.title
-    ? `*${data.title}*\n\n${data.text}`
-    : data.text;
+export async function createShareLink(recipe: RecipeData): Promise<string | null> {
+  try {
+    const response = await fetch('/api/share', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(recipe),
+    });
 
-  const fullText = data.url
-    ? `${shareText}\n\n${data.url}`
-    : `${shareText}\n\nScoperto con Gusto - gusto-8cx.pages.dev`;
+    if (!response.ok) {
+      console.error('Failed to create share link');
+      return null;
+    }
+
+    const data = await response.json() as { shareUrl: string };
+    return data.shareUrl;
+  } catch (error) {
+    console.error('Share link creation error:', error);
+    return null;
+  }
+}
+
+/**
+ * Share a recipe via link
+ * Creates a shareable link and opens the share dialog
+ */
+export async function shareRecipe(recipe: RecipeData): Promise<boolean> {
+  // Create shareable link
+  const shareUrl = await createShareLink(recipe);
+
+  if (!shareUrl) {
+    // Fallback to text sharing if link creation fails
+    return shareRecipeAsText(recipe);
+  }
+
+  const shareText = `${recipe.name} - Ricetta su Gusto`;
 
   // Try native Web Share API first (works great on mobile)
   if (navigator.share) {
     try {
       await navigator.share({
-        title: data.title || 'Gusto',
-        text: fullText,
+        title: recipe.name,
+        text: shareText,
+        url: shareUrl,
       });
       return true;
     } catch (err) {
-      // User cancelled or error - fall through to WhatsApp
       if ((err as Error).name === 'AbortError') {
         return false; // User cancelled
       }
     }
   }
 
-  // Fallback: Open WhatsApp with pre-filled text
-  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(fullText)}`;
+  // Fallback: Open WhatsApp with link
+  const whatsappText = `${shareText}\n${shareUrl}`;
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(whatsappText)}`;
   window.open(whatsappUrl, '_blank');
   return true;
 }
 
 /**
- * Format recipe for sharing
+ * Fallback: Share recipe as text (if link creation fails)
  */
-export function formatRecipeForShare(recipe: {
-  name: string;
-  time?: string;
-  servings?: string;
-  ingredients: string[];
-  steps: string[];
-}): string {
-  let text = '';
+function shareRecipeAsText(recipe: RecipeData): boolean {
+  let text = `*${recipe.name}*\n\n`;
 
   if (recipe.time) text += `Tempo: ${recipe.time}\n`;
   if (recipe.servings) text += `Porzioni: ${recipe.servings}\n`;
@@ -62,49 +88,60 @@ export function formatRecipeForShare(recipe: {
     text += `- ${ing}\n`;
   });
 
-  text += '\nPreparazione:\n';
-  recipe.steps.forEach((step, i) => {
-    text += `${i + 1}. ${step}\n`;
-  });
+  text += '\nScoperto con Gusto - gusto-8cx.pages.dev';
 
-  return text;
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+  window.open(whatsappUrl, '_blank');
+  return true;
 }
 
 /**
- * Share a recipe
- * @param recipe - The recipe data
- * @param recipeId - Optional recipe ID for share URL with preview
- */
-export async function shareRecipe(recipe: {
-  name: string;
-  time?: string;
-  servings?: string;
-  ingredients: string[];
-  steps: string[];
-}, recipeId?: string): Promise<boolean> {
-  // If we have a recipe ID, include the share URL for link preview
-  const shareUrl = recipeId ? `${BASE_URL}/share/${recipeId}` : undefined;
-
-  return shareContent({
-    title: recipe.name,
-    text: formatRecipeForShare(recipe),
-    url: shareUrl,
-  });
-}
-
-/**
- * Generate a share URL for a recipe (for copying link)
- */
-export function getRecipeShareUrl(recipeId: string): string {
-  return `${BASE_URL}/share/${recipeId}`;
-}
-
-/**
- * Share a text message
+ * Share a text message (for non-recipe content)
  */
 export async function shareMessage(content: string, title?: string): Promise<boolean> {
-  return shareContent({
-    title,
-    text: content,
-  });
+  const shareText = title ? `*${title}*\n\n${content}` : content;
+  const fullText = `${shareText}\n\nScoperto con Gusto - gusto-8cx.pages.dev`;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: title || 'Gusto',
+        text: fullText,
+      });
+      return true;
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') {
+        return false;
+      }
+    }
+  }
+
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(fullText)}`;
+  window.open(whatsappUrl, '_blank');
+  return true;
+}
+
+/**
+ * Copy share link to clipboard
+ */
+export async function copyShareLink(recipe: RecipeData): Promise<string | null> {
+  const shareUrl = await createShareLink(recipe);
+
+  if (!shareUrl) {
+    return null;
+  }
+
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    return shareUrl;
+  } catch {
+    return shareUrl; // Return URL even if clipboard fails
+  }
+}
+
+/**
+ * Get share URL for a recipe (without creating new share)
+ */
+export function getRecipeShareUrl(shareId: string): string {
+  return `${BASE_URL}/share/${shareId}`;
 }

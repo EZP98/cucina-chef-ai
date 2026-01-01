@@ -121,7 +121,7 @@ export const FormattedMessage = ({ content, style = {} }: FormattedMessageProps)
 };
 
 // Format inline text: **bold**, etc.
-function formatInlineText(text: string): React.ReactNode {
+export function formatInlineText(text: string): React.ReactNode {
   const parts: React.ReactNode[] = [];
   let remaining = text;
   let key = 0;
@@ -135,11 +135,14 @@ function formatInlineText(text: string): React.ReactNode {
       if (boldMatch.index > 0) {
         parts.push(<span key={key++}>{remaining.slice(0, boldMatch.index)}</span>);
       }
-      // Add bold text
+      // Add bold text - use explicit fontFamily + fontWeight for mobile compatibility
       parts.push(
-        <strong key={key++} style={{ fontWeight: 'bold' }}>
+        <span key={key++} style={{
+          fontFamily: "'Caveat', cursive",
+          fontWeight: 700,
+        }}>
           {boldMatch[1]}
-        </strong>
+        </span>
       );
       remaining = remaining.slice(boldMatch.index + boldMatch[0].length);
     } else {

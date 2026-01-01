@@ -1,5 +1,13 @@
 // Chat Types for Chef AI
 
+// Import from single source of truth
+import type { RecipeCategory as RecipeCategoryType } from '../config/recipeCategories';
+import type { RecipeIcon as RecipeIconType } from '../config/recipeIcons';
+export { RECIPE_CATEGORY_KEYS, getCategoryIcon, getCategoryLabel } from '../config/recipeCategories';
+export { RECIPE_ICONS, getRecipeIcon, hasRecipeIcon } from '../config/recipeIcons';
+export type RecipeCategory = RecipeCategoryType;
+export type RecipeIcon = RecipeIconType;
+
 export interface ParsedRecipe {
   name: string;
   description?: string;
@@ -8,6 +16,9 @@ export interface ParsedRecipe {
   ingredients: string[];
   steps: string[];
   tips?: string[];
+  icon?: string; // New: AI-selected specific icon (e.g., "Spaghetti", "Risotto", "Pandoro")
+  category?: RecipeCategory; // Legacy: fallback category
+  iconSvg?: string; // Deprecated: kept for backwards compatibility with saved recipes
 }
 
 export interface Message {

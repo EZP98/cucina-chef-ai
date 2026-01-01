@@ -107,14 +107,13 @@ const CompactRecipeCard = ({
     onClick={onClick}
     style={{
       position: 'relative',
-      padding: '12px 16px',
-      minWidth: 140,
-      maxWidth: 160,
+      padding: '16px 20px',
+      minWidth: 180,
       flexShrink: 0,
       cursor: onClick ? 'pointer' : 'default',
       display: 'flex',
       alignItems: 'center',
-      gap: 10,
+      gap: 12,
     }}
   >
     {/* Hand-drawn border */}
@@ -144,22 +143,20 @@ const CompactRecipeCard = ({
       {iconSvg ? (
         <div
           dangerouslySetInnerHTML={{ __html: iconSvg }}
-          style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         />
       ) : Illustration ? (
-        <Illustration size={28} />
+        <Illustration size={36} />
       ) : (
-        <SketchBowl size={28} />
+        <SketchBowl size={36} />
       )}
     </div>
     {/* Name */}
     <span style={{
       fontFamily: "'Caveat', cursive",
-      fontSize: 15,
+      fontSize: 18,
       color: '#2D2A26',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-      whiteSpace: 'nowrap',
+      lineHeight: 1.2,
     }}>
       {name}
     </span>
@@ -2769,34 +2766,6 @@ export default function App() {
               </DashedBox>
             </div>
           </div>
-        )}
-
-        {/* Chat FAB - visible only on recipes and pantry screens */}
-        {(screen === 'recipes' || screen === 'pantry') && (
-          <button
-            onClick={() => navigate('/chat')}
-            style={{
-              position: 'fixed',
-              bottom: isMobile ? 24 : 32,
-              right: isMobile ? 24 : 32,
-              width: 56,
-              height: 56,
-              borderRadius: '50%',
-              background: '#2D2A26',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              zIndex: 100
-            }}
-          >
-            <svg width="24" height="24" viewBox="0 0 26 26" fill="none" stroke="#FAF7F2" strokeWidth="1.5">
-              <path d="M4 6Q4 4 6 4H20Q22 4 22 6V16Q22 18 20 18H10L4 22V6Z" strokeLinecap="round"/>
-              <path d="M8 10H18M8 14H14" strokeLinecap="round"/>
-            </svg>
-          </button>
         )}
       </div>
 

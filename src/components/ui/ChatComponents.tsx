@@ -6,6 +6,23 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import type { RecipeCategory } from '../../types/chat';
+import {
+  SketchEgg,
+  SketchPasta,
+  SketchFish,
+  SketchSoup,
+  SketchSalad,
+  SketchBread,
+  SketchPizza,
+  SketchIceCream,
+  SketchCheese,
+  SketchCarrot,
+  SketchLemon,
+  SketchWine,
+  SketchOil,
+  SketchBowl,
+  SketchChicken,
+} from './SketchIllustrations';
 
 // ============================================
 // 🎨 DESIGN TOKENS
@@ -56,113 +73,23 @@ export const Brace = ({ height = 40 }: { height?: number }) => (
 // Keys must match RecipeCategory from types/chat.ts
 // ============================================
 
+// Use icons from SketchIllustrations - professional hand-drawn icons
 export const FoodIcons: Record<RecipeCategory, React.FC<{ size?: number }>> = {
-  // Uovo - UNA ellisse verticale
-  egg: ({ size = 28 }) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <ellipse cx="16" cy="18" rx="8" ry="11" stroke={tokens.colors.ink} strokeWidth="1.2"/>
-    </svg>
-  ),
-
-  // Spaghetto - UNA curva sinuosa
-  pasta: ({ size = 28 }) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <path d="M8 24 C12 8, 20 8, 24 24" stroke={tokens.colors.ink} strokeWidth="1.2" strokeLinecap="round"/>
-    </svg>
-  ),
-
-  // Bistecca - UNA ellisse orizzontale
-  meat: ({ size = 28 }) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <ellipse cx="16" cy="16" rx="11" ry="7" stroke={tokens.colors.ink} strokeWidth="1.2"/>
-    </svg>
-  ),
-
-  // Pesce - UN rombo arrotondato
-  fish: ({ size = 28 }) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <path d="M4 16 Q16 6, 28 16 Q16 26, 4 16" stroke={tokens.colors.ink} strokeWidth="1.2"/>
-    </svg>
-  ),
-
-  // Ciotola - UN semicerchio aperto
-  soup: ({ size = 28 }) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <path d="M4 14 Q16 28, 28 14" stroke={tokens.colors.ink} strokeWidth="1.2" strokeLinecap="round"/>
-    </svg>
-  ),
-
-  // Foglia - UNA mandorla verticale
-  salad: ({ size = 28 }) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <path d="M16 4 Q28 16, 16 28 Q4 16, 16 4" stroke={tokens.colors.ink} strokeWidth="1.2"/>
-    </svg>
-  ),
-
-  // Pagnotta - UNA ellisse larga
-  bread: ({ size = 28 }) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <ellipse cx="16" cy="16" rx="11" ry="8" stroke={tokens.colors.ink} strokeWidth="1.2"/>
-    </svg>
-  ),
-
-  // Pizza - UN triangolo
-  pizza: ({ size = 28 }) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <path d="M16 4 L4 28 L28 28 Z" stroke={tokens.colors.ink} strokeWidth="1.2" strokeLinejoin="round"/>
-    </svg>
-  ),
-
-  // Gelato - cono + pallina (2 forme unite)
-  dessert: ({ size = 28 }) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <circle cx="16" cy="10" r="7" stroke={tokens.colors.ink} strokeWidth="1.2"/>
-      <path d="M10 14 L16 28 L22 14" stroke={tokens.colors.ink} strokeWidth="1.2" strokeLinejoin="round"/>
-    </svg>
-  ),
-
-  // Formaggio - UN triangolo
-  cheese: ({ size = 28 }) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <path d="M4 26 L16 4 L28 26 Z" stroke={tokens.colors.ink} strokeWidth="1.2" strokeLinejoin="round"/>
-    </svg>
-  ),
-
-  // Carota - UN triangolo stretto verticale
-  vegetable: ({ size = 28 }) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <path d="M16 4 L10 28 L22 28 Z" stroke={tokens.colors.ink} strokeWidth="1.2" strokeLinejoin="round"/>
-    </svg>
-  ),
-
-  // Mela - cerchio + gambo
-  fruit: ({ size = 28 }) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <circle cx="16" cy="18" r="10" stroke={tokens.colors.ink} strokeWidth="1.2"/>
-      <path d="M16 8 L16 4" stroke={tokens.colors.ink} strokeWidth="1.2" strokeLinecap="round"/>
-    </svg>
-  ),
-
-  // Bicchiere - UN trapezio
-  drink: ({ size = 28 }) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <path d="M8 4 L6 28 L26 28 L24 4" stroke={tokens.colors.ink} strokeWidth="1.2" strokeLinejoin="round"/>
-    </svg>
-  ),
-
-  // Goccia - UNA forma a goccia
-  sauce: ({ size = 28 }) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <path d="M16 4 Q26 18, 16 28 Q6 18, 16 4" stroke={tokens.colors.ink} strokeWidth="1.2"/>
-    </svg>
-  ),
-
-  // Bowl = soup (semicerchio)
-  bowl: ({ size = 28 }) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <path d="M4 14 Q16 28, 28 14" stroke={tokens.colors.ink} strokeWidth="1.2" strokeLinecap="round"/>
-    </svg>
-  ),
+  egg: SketchEgg,
+  pasta: SketchPasta,
+  meat: SketchChicken,
+  fish: SketchFish,
+  soup: SketchSoup,
+  salad: SketchSalad,
+  bread: SketchBread,
+  pizza: SketchPizza,
+  dessert: SketchIceCream,
+  cheese: SketchCheese,
+  vegetable: SketchCarrot,
+  fruit: SketchLemon,
+  drink: SketchWine,
+  sauce: SketchOil,
+  bowl: SketchBowl,
 };
 
 // ============================================

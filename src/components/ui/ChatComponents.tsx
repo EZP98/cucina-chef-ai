@@ -131,10 +131,9 @@ const ZineDashedBoxSvg = ({ color = tokens.colors.inkFaded }: { color?: string }
   </svg>
 );
 
-// Box tratteggiato (hand-drawn style)
+// Box tratteggiato (semplice CSS)
 export const DashedBox: React.FC<BoxProps> = ({ children, style = {} }) => (
-  <div style={{ position: 'relative', borderRadius: 4, padding: 14, overflow: 'hidden', ...style }}>
-    <ZineDashedBoxSvg />
+  <div style={{ border: `1.5px dashed ${tokens.colors.inkFaded}`, borderRadius: 4, padding: 14, overflow: 'hidden', ...style }}>
     {children}
   </div>
 );

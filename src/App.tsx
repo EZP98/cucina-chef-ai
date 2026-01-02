@@ -2010,39 +2010,54 @@ export default function App() {
                     </span>
                   </div>
                 ))}
-                {/* Globe button */}
-                <div
-                  onClick={() => setGlobeModalOpen(true)}
-                  style={{
-                    position: 'relative',
-                    padding: '16px',
-                    flex: 1,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 8,
-                  }}
-                >
-                  {/* Hand-drawn border dashed */}
-                  <ZineDashedBox />
-                  {/* Globe icon */}
-                  <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
-                    <circle cx="24" cy="24" r="16" stroke="#2D2A26" strokeWidth="1.5" fill="none"/>
-                    <ellipse cx="24" cy="24" rx="8" ry="16" stroke="#2D2A26" strokeWidth="1" fill="none"/>
-                    <path d="M8 24 L40 24" stroke="#2D2A26" strokeWidth="1"/>
-                    <path d="M12 16 L36 16 M12 32 L36 32" stroke="#2D2A26" strokeWidth="0.5" strokeDasharray="2 2"/>
-                  </svg>
-                  <span style={{
-                    fontFamily: "'Caveat', cursive",
-                    fontSize: 14,
-                    color: '#8B857C',
-                    textAlign: 'center',
-                  }}>
-                    Esplora
-                  </span>
-                </div>
               </div>
+            </div>
+
+            {/* Esplora il Mondo - Globe section */}
+            <div
+              onClick={() => setGlobeModalOpen(true)}
+              style={{
+                position: 'relative',
+                padding: '20px 24px',
+                marginBottom: 28,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 16,
+              }}
+            >
+              {/* Hand-drawn border */}
+              <ZineDashedBox />
+              {/* Globe icon */}
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none" style={{ flexShrink: 0 }}>
+                <circle cx="24" cy="24" r="18" stroke="#2D2A26" strokeWidth="1.5" fill="none"/>
+                <ellipse cx="24" cy="24" rx="9" ry="18" stroke="#2D2A26" strokeWidth="1" fill="none"/>
+                <path d="M6 24 L42 24" stroke="#2D2A26" strokeWidth="1"/>
+                <path d="M9 14 L39 14 M9 34 L39 34" stroke="#2D2A26" strokeWidth="0.5"/>
+                <circle cx="24" cy="24" r="3" fill="#2D2A26" opacity="0.2"/>
+              </svg>
+              {/* Text */}
+              <div style={{ flex: 1 }}>
+                <span style={{
+                  fontFamily: "'Caveat', cursive",
+                  fontSize: 22,
+                  color: '#2D2A26',
+                  display: 'block',
+                }}>
+                  Esplora il Mondo
+                </span>
+                <span style={{
+                  fontFamily: "'Caveat', cursive",
+                  fontSize: 14,
+                  color: '#8B857C',
+                }}>
+                  Scopri piatti tipici da ogni paese
+                </span>
+              </div>
+              {/* Arrow */}
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                <path d="M9 6 L15 12 L9 18" stroke="#2D2A26" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
 
             {/* Recipes content - only show if logged in and has recipes */}

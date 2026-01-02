@@ -4,8 +4,7 @@ import {
   ZineText,
   ZineRecipeCard,
   ZineNoteCard,
-  Underline,
-  SketchHeart
+  Underline
 } from './components/ui/ZineUI';
 import { GustoLogo } from './components/ui/GustoLogo';
 import {
@@ -51,6 +50,7 @@ import {
   IconDispensa,
   IconCamera
 } from './components/ui/GustoIcons';
+import { getWeeklyThemes } from './config/cuisineThemes';
 
 // Hamburger Icon
 const HamburgerIcon = () => (
@@ -91,76 +91,69 @@ const NavItemBorder = () => (
   </svg>
 );
 
-// Compact Recipe Card for favorites horizontal scroll
-const CompactRecipeCard = ({
-  name,
-  iconSvg,
-  Illustration,
-  onClick
-}: {
-  name: string;
-  iconSvg?: string;
-  Illustration?: React.ComponentType<{ size?: number }>;
-  onClick?: () => void;
-}) => (
-  <div
-    onClick={onClick}
+// Hand-drawn DASHED box border (zine style) - replaces CSS dashed borders
+const ZineDashedBox = ({ color = '#2D2A26', strokeWidth = 1.5 }: { color?: string; strokeWidth?: number }) => (
+  <svg
     style={{
-      position: 'relative',
-      padding: '16px 20px',
-      minWidth: 180,
-      flexShrink: 0,
-      cursor: onClick ? 'pointer' : 'default',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 12,
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      pointerEvents: 'none',
     }}
+    viewBox="0 0 100 100"
+    preserveAspectRatio="none"
+    fill="none"
   >
-    {/* Hand-drawn border */}
-    <svg
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-      }}
-      viewBox="0 0 100 100"
-      preserveAspectRatio="none"
+    {/* Top edge - irregular dashes */}
+    <path
+      d="M3 2 Q8 1.5 13 2.5 M18 2 Q25 2.8 32 2 M37 2.5 Q45 1.8 53 2.2 M58 2 Q67 2.5 76 1.8 M81 2.3 Q88 2 95 2.5"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+    />
+    {/* Right edge - irregular dashes */}
+    <path
+      d="M98 5 Q98.5 12 97.8 19 M98.2 26 Q98 35 98.3 44 M97.8 51 Q98.2 60 98 69 M98.3 76 Q97.8 85 98 94"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+    />
+    {/* Bottom edge - irregular dashes */}
+    <path
+      d="M95 98 Q88 97.5 81 98.2 M74 97.8 Q65 98.3 56 98 M49 98.2 Q40 97.6 31 98 M24 97.8 Q15 98.2 6 98"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+    />
+    {/* Left edge - irregular dashes */}
+    <path
+      d="M2 94 Q1.8 85 2.3 76 M2 69 Q2.4 60 1.8 51 M2.2 44 Q2 35 2.3 26 M1.8 19 Q2.2 12 2 5"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+// Wavy separator line (replaces borderBottom dashed)
+const ZineWavySeparator = ({ width = 100, color = '#C4C0B9' }: { width?: number | string; color?: string }) => (
+  <svg
+    width={width}
+    height="6"
+    viewBox="0 0 100 6"
+    style={{ display: 'block' }}
+    preserveAspectRatio="none"
+  >
+    <path
+      d="M0 3 Q8 1 16 3 Q24 5 32 3 Q40 1 48 3 Q56 5 64 3 Q72 1 80 3 Q88 5 96 3 L100 3"
+      stroke={color}
+      strokeWidth="1.2"
       fill="none"
-    >
-      <path
-        d="M2 4 Q0 0 4 2 L96 2 Q100 0 98 4 L98 96 Q100 100 96 98 L4 98 Q0 100 2 96 Z"
-        stroke="#2D2A26"
-        strokeWidth="0.8"
-        fill="none"
-        strokeLinecap="round"
-      />
-    </svg>
-    {/* Icon */}
-    <div style={{ flexShrink: 0 }}>
-      {iconSvg ? (
-        <div
-          dangerouslySetInnerHTML={{ __html: iconSvg }}
-          style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        />
-      ) : Illustration ? (
-        <Illustration size={36} />
-      ) : (
-        <SketchBowl size={36} />
-      )}
-    </div>
-    {/* Name */}
-    <span style={{
-      fontFamily: "'Caveat', cursive",
-      fontSize: 18,
-      color: '#2D2A26',
-      lineHeight: 1.2,
-    }}>
-      {name}
-    </span>
-  </div>
+      strokeLinecap="round"
+    />
+  </svg>
 );
 
 // Nav Icons - using GustoIcons with active state
@@ -279,7 +272,6 @@ export default function App() {
   // Recipes hook
   const {
     recipes: savedRecipesRaw,
-    favorites: favoriteRecipesRaw,
     saveRecipe,
     deleteRecipe,
     toggleFavorite: toggleRecipeFavorite,
@@ -288,7 +280,6 @@ export default function App() {
 
   // Ensure recipes are always arrays (defensive against undefined)
   const savedRecipes = savedRecipesRaw || [];
-  const favoriteRecipes = favoriteRecipesRaw || [];
 
   // State for tracking which recipe is being saved
   const [savingRecipeId, setSavingRecipeId] = useState<string | null>(null);
@@ -1101,9 +1092,7 @@ export default function App() {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: 16,
-                paddingBottom: 14,
-                marginBottom: 4,
-                borderBottom: '1px dashed #E8E4DE',
+                paddingBottom: 10,
                 flexWrap: 'wrap'
               }}>
                 {/* Left side: Mode + Skills */}
@@ -1356,6 +1345,7 @@ export default function App() {
                   </button>
                 </div>
               </div>
+              <ZineWavySeparator width="100%" color="#E8E4DE" />
 
               {/* Input Row */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1958,29 +1948,72 @@ export default function App() {
               </div>
             )}
 
+            {/* Scopri - Weekly themes with flags */}
+            <div style={{ marginBottom: 28 }}>
+              <ZineText size="md" style={{ color: '#8B857C', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                  <circle cx="10" cy="10" r="8" stroke="#8B857C" strokeWidth="1.5"/>
+                  <path d="M10 6 L10 10 L13 13" stroke="#8B857C" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                {t('recipes.dailyRecipes')}
+              </ZineText>
+              <div style={{ display: 'flex', gap: 12 }}>
+                {getWeeklyThemes().map((theme) => (
+                  <div
+                    key={theme.id}
+                    onClick={() => sendMessage(theme.prompt)}
+                    style={{
+                      position: 'relative',
+                      padding: '16px',
+                      flex: 1,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 8,
+                    }}
+                  >
+                    {/* Hand-drawn border */}
+                    <svg
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        pointerEvents: 'none',
+                      }}
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
+                      fill="none"
+                    >
+                      <path
+                        d="M2 4 Q0 0 4 2 L96 2 Q100 0 98 4 L98 96 Q100 100 96 98 L4 98 Q0 100 2 96 Z"
+                        stroke="#2D2A26"
+                        strokeWidth="0.8"
+                        fill="none"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    {/* Flag icon */}
+                    <theme.Flag size={32} />
+                    {/* Country name */}
+                    <span style={{
+                      fontFamily: "'Caveat', cursive",
+                      fontSize: 16,
+                      color: '#2D2A26',
+                      textAlign: 'center',
+                    }}>
+                      {theme.country}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Recipes content - only show if logged in and has recipes */}
             {isAuthenticated && savedRecipes.length > 0 && (
               <>
-                {/* Preferite */}
-                {favoriteRecipes.length > 0 && (
-                  <>
-                    <ZineText size="md" style={{ color: '#8B857C', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                      <SketchHeart size={18} /> {t('recipes.favorites')}
-                    </ZineText>
-                    <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 16, marginBottom: 24 }}>
-                      {favoriteRecipes.map((r) => (
-                        <CompactRecipeCard
-                          key={r.id}
-                          name={r.name}
-                          iconSvg={r.iconSvg}
-                          Illustration={r.iconSvg ? undefined : SketchBowl}
-                          onClick={() => navigate(`/recipes/${r.id}`)}
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-
                 {/* Tutte */}
                 <ZineText size="lg" underline style={{ display: 'block', marginBottom: 20 }}>
                   {t('recipes.all')}
@@ -2089,13 +2122,13 @@ export default function App() {
               {/* Add photo button */}
               {capturedPhotos.length < 3 && !isAnalyzingPhoto && (
                 <div style={{
-                  border: '2px dashed #2D2A26',
+                  position: 'relative',
                   borderRadius: 12,
                   padding: capturedPhotos.length > 0 ? 16 : 24,
                   textAlign: 'center',
                   cursor: 'pointer',
-                  position: 'relative',
                 }}>
+                  <ZineDashedBox color="#2D2A26" strokeWidth={1.8} />
                   <input
                     type="file"
                     accept="image/*"
@@ -2109,6 +2142,7 @@ export default function App() {
                       height: '100%',
                       opacity: 0,
                       cursor: 'pointer',
+                      zIndex: 10,
                     }}
                   />
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
@@ -2467,9 +2501,7 @@ export default function App() {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   gap: 16,
-                  paddingBottom: 14,
-                  marginBottom: 4,
-                  borderBottom: '1px dashed #E8E4DE',
+                  paddingBottom: 10,
                   flexWrap: 'wrap'
                 }}>
                   {/* Left side: Mode + Skills */}
@@ -2722,6 +2754,7 @@ export default function App() {
                     </button>
                   </div>
                 </div>
+                <ZineWavySeparator width="100%" color="#E8E4DE" />
 
                 {/* Input Row */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

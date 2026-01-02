@@ -85,9 +85,56 @@ export const SketchBox: React.FC<BoxProps> = ({ children, style = {} }) => (
   </div>
 );
 
-// Box tratteggiato
+// Hand-drawn DASHED box border (zine style)
+const ZineDashedBoxSvg = ({ color = tokens.colors.inkFaded }: { color?: string }) => (
+  <svg
+    style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      pointerEvents: 'none',
+    }}
+    viewBox="0 0 100 100"
+    preserveAspectRatio="none"
+    fill="none"
+  >
+    {/* Top edge - irregular dashes */}
+    <path
+      d="M3 2 Q8 1.5 13 2.5 M18 2 Q25 2.8 32 2 M37 2.5 Q45 1.8 53 2.2 M58 2 Q67 2.5 76 1.8 M81 2.3 Q88 2 95 2.5"
+      stroke={color}
+      strokeWidth="1.2"
+      strokeLinecap="round"
+    />
+    {/* Right edge - irregular dashes */}
+    <path
+      d="M98 5 Q98.5 12 97.8 19 M98.2 26 Q98 35 98.3 44 M97.8 51 Q98.2 60 98 69 M98.3 76 Q97.8 85 98 94"
+      stroke={color}
+      strokeWidth="1.2"
+      strokeLinecap="round"
+    />
+    {/* Bottom edge - irregular dashes */}
+    <path
+      d="M95 98 Q88 97.5 81 98.2 M74 97.8 Q65 98.3 56 98 M49 98.2 Q40 97.6 31 98 M24 97.8 Q15 98.2 6 98"
+      stroke={color}
+      strokeWidth="1.2"
+      strokeLinecap="round"
+    />
+    {/* Left edge - irregular dashes */}
+    <path
+      d="M2 94 Q1.8 85 2.3 76 M2 69 Q2.4 60 1.8 51 M2.2 44 Q2 35 2.3 26 M1.8 19 Q2.2 12 2 5"
+      stroke={color}
+      strokeWidth="1.2"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+// Box tratteggiato (hand-drawn style)
 export const DashedBox: React.FC<BoxProps> = ({ children, style = {} }) => (
-  <div style={{ border: `1.5px dashed ${tokens.colors.inkFaded}`, borderRadius: 4, padding: 14, overflow: 'hidden', ...style }}>
+  <div style={{ position: 'relative', borderRadius: 4, padding: 14, overflow: 'hidden', ...style }}>
+    <ZineDashedBoxSvg />
     {children}
   </div>
 );
@@ -802,12 +849,13 @@ export const StepsList: React.FC<StepsListProps> = ({ steps = [] }) => (
  */
 export const RecipeNote: React.FC<MessageProps> = ({ children }) => (
   <div style={{
+    position: 'relative',
     marginTop: 20,
     padding: 16,
     background: '#FFF9E6',
     borderRadius: 8,
-    border: '1px dashed #E8D5A3',
   }}>
+    <ZineDashedBoxSvg color="#E8D5A3" />
     <div style={{ marginBottom: 8 }}>
       <span style={{
         fontFamily: tokens.fonts.hand,
@@ -1151,13 +1199,14 @@ export const NewChatButton: React.FC<{ onClick?: () => void }> = ({ onClick }) =
   <button
     onClick={onClick}
     style={{
+      position: 'relative',
       display: 'flex',
       alignItems: 'center',
       gap: 8,
       width: '100%',
       padding: '12px 14px',
       background: 'transparent',
-      border: `1.5px dashed ${tokens.colors.inkFaded}`,
+      border: 'none',
       borderRadius: 8,
       cursor: 'pointer',
       fontFamily: tokens.fonts.hand,
@@ -1166,6 +1215,7 @@ export const NewChatButton: React.FC<{ onClick?: () => void }> = ({ onClick }) =
       transition: 'all 0.15s',
     }}
   >
+    <ZineDashedBoxSvg color={tokens.colors.inkFaded} />
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path d="M8 2 L8 14 M2 8 L14 8" stroke={tokens.colors.inkLight} strokeWidth="1.5" strokeLinecap="round"/>
     </svg>

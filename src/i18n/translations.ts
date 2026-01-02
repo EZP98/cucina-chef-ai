@@ -59,6 +59,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'skill.recuperoDesc': 'riusa gli avanzi',
 
     // Recipes
+    'recipes.dailyRecipes': 'scopri',
     'recipes.favorites': 'preferite',
     'recipes.all': 'tutte le ricette',
     'recipes.add': '+ aggiungi ricetta',
@@ -184,6 +185,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'skill.recupero': 'Salvage',
     'skill.recuperoDesc': 'reuse leftovers',
 
+    'recipes.dailyRecipes': 'discover',
     'recipes.favorites': 'favorites',
     'recipes.all': 'all recipes',
     'recipes.add': '+ add recipe',
@@ -305,6 +307,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'skill.recupero': '剩食利用',
     'skill.recuperoDesc': '重新利用剩餘食材',
 
+    'recipes.dailyRecipes': '探索',
     'recipes.favorites': '收藏',
     'recipes.all': '所有食譜',
     'recipes.add': '+ 新增食譜',
@@ -426,6 +429,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'skill.recupero': 'Anti-gaspi',
     'skill.recuperoDesc': 'réutiliser les restes',
 
+    'recipes.dailyRecipes': 'decouvrir',
     'recipes.favorites': 'favoris',
     'recipes.all': 'toutes les recettes',
     'recipes.add': '+ ajouter recette',
@@ -547,6 +551,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'skill.recupero': '残り物活用',
     'skill.recuperoDesc': '残り物を再利用',
 
+    'recipes.dailyRecipes': '発見',
     'recipes.favorites': 'お気に入り',
     'recipes.all': 'すべてのレシピ',
     'recipes.add': '+ レシピを追加',
@@ -668,6 +673,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'skill.recupero': 'Aprovechamiento',
     'skill.recuperoDesc': 'reutiliza las sobras',
 
+    'recipes.dailyRecipes': 'descubrir',
     'recipes.favorites': 'favoritos',
     'recipes.all': 'todas las recetas',
     'recipes.add': '+ añadir receta',

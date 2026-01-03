@@ -69,7 +69,7 @@ export function ShoppingList({
             </div>
             <span style={{
               fontFamily: "'Caveat', cursive",
-              fontSize: 17,
+              fontSize: 19,
               color: item.checked ? '#8B857C' : '#2D2A26',
               textDecoration: item.checked ? 'line-through' : 'none',
             }}>

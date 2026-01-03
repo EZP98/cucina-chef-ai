@@ -6,8 +6,11 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import { RECIPE_CATEGORIES, type RecipeCategory } from '../../config/recipeCategories';
-import { getRecipeIcon, hasRecipeIcon } from '../../config/recipeIcons';
 import { UnderlinedText } from './ZineUI';
+import { translations, type Language } from '../../i18n/translations';
+
+// Translation helper
+const t = (key: string, lang: Language = 'it') => translations[lang]?.[key] || translations['it'][key] || key;
 
 // ============================================
 // 🎨 DESIGN TOKENS
@@ -85,52 +88,6 @@ export const SketchBox: React.FC<BoxProps> = ({ children, style = {} }) => (
   </div>
 );
 
-// Hand-drawn DASHED box border (zine style)
-const ZineDashedBoxSvg = ({ color = tokens.colors.inkFaded }: { color?: string }) => (
-  <svg
-    style={{
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: '100%',
-      pointerEvents: 'none',
-    }}
-    viewBox="0 0 100 100"
-    preserveAspectRatio="none"
-    fill="none"
-  >
-    {/* Top edge - irregular dashes */}
-    <path
-      d="M3 2 Q8 1.5 13 2.5 M18 2 Q25 2.8 32 2 M37 2.5 Q45 1.8 53 2.2 M58 2 Q67 2.5 76 1.8 M81 2.3 Q88 2 95 2.5"
-      stroke={color}
-      strokeWidth="1.2"
-      strokeLinecap="round"
-    />
-    {/* Right edge - irregular dashes */}
-    <path
-      d="M98 5 Q98.5 12 97.8 19 M98.2 26 Q98 35 98.3 44 M97.8 51 Q98.2 60 98 69 M98.3 76 Q97.8 85 98 94"
-      stroke={color}
-      strokeWidth="1.2"
-      strokeLinecap="round"
-    />
-    {/* Bottom edge - irregular dashes */}
-    <path
-      d="M95 98 Q88 97.5 81 98.2 M74 97.8 Q65 98.3 56 98 M49 98.2 Q40 97.6 31 98 M24 97.8 Q15 98.2 6 98"
-      stroke={color}
-      strokeWidth="1.2"
-      strokeLinecap="round"
-    />
-    {/* Left edge - irregular dashes */}
-    <path
-      d="M2 94 Q1.8 85 2.3 76 M2 69 Q2.4 60 1.8 51 M2.2 44 Q2 35 2.3 26 M1.8 19 Q2.2 12 2 5"
-      stroke={color}
-      strokeWidth="1.2"
-      strokeLinecap="round"
-    />
-  </svg>
-);
-
 // Box tratteggiato (semplice CSS)
 export const DashedBox: React.FC<BoxProps> = ({ children, style = {} }) => (
   <div style={{ border: `1.5px dashed ${tokens.colors.inkFaded}`, borderRadius: 4, padding: 14, overflow: 'hidden', ...style }}>
@@ -162,7 +119,7 @@ export const UserMessage: React.FC<MessageProps> = ({ children }) => (
     }}>
       <p style={{
         fontFamily: tokens.fonts.hand,
-        fontSize: 17,
+        fontSize: 19,
         color: tokens.colors.ink,
         margin: 0,
         lineHeight: 1.4,
@@ -531,105 +488,100 @@ interface RecipeHeaderProps {
   icon?: string; // New: AI-selected specific icon (e.g., "Spaghetti", "Risotto")
   category?: RecipeCategory; // Legacy: fallback category for icon selection
   iconSvg?: string;  // Deprecated: kept for backwards compatibility
+  language?: Language;
 }
 
 /**
  * Header della ricetta con titolo e meta info
  */
+// Helper to render difficulty as asterisks
+const DifficultyStars = ({ level, language = 'it' }: { level: string; language?: Language }) => {
+  const stars = level === 'facile' ? 1 : level === 'media' ? 2 : 3;
+  const labelKey = level === 'facile' ? 'recipe.easy' : level === 'media' ? 'recipe.medium' : 'recipe.hard';
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <span style={{ fontFamily: tokens.fonts.hand, fontSize: 15, color: tokens.colors.inkLight, letterSpacing: 2 }}>
+        {'*'.repeat(stars)}
+      </span>
+      <span style={{ fontFamily: tokens.fonts.hand, fontSize: 15, color: tokens.colors.inkLight }}>
+        {t(labelKey, language)}
+      </span>
+    </div>
+  );
+};
+
 export const RecipeHeader: React.FC<RecipeHeaderProps> = ({
   title,
   description,
   time,
   difficulty,
   servings,
-  icon,
-  category,
-  iconSvg,
+  language = 'it',
 }) => {
-  // Priority: AI-selected icon > category-based icon > legacy iconSvg > default bowl
-  const getIcon = () => {
-    if (icon && hasRecipeIcon(icon)) {
-      return getRecipeIcon(icon);
-    }
-    if (category && FoodIcons[category]) {
-      return FoodIcons[category];
-    }
-    return FoodIcons.bowl;
-  };
-  const IconComponent = getIcon();
-
   return (
     <div style={{ marginBottom: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
-        {/* Priority: AI icon > category icon > legacy iconSvg > default */}
-        {icon && hasRecipeIcon(icon) ? (
-          <IconComponent size={48} />
-        ) : category ? (
-          <IconComponent size={48} />
-        ) : iconSvg ? (
-          <div
-            dangerouslySetInnerHTML={{ __html: iconSvg }}
-            style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      {/* Title aligned LEFT with underline */}
+      <div style={{ marginBottom: 16 }}>
+        <h2 style={{
+          fontFamily: tokens.fonts.hand,
+          fontSize: 32,
+          color: tokens.colors.ink,
+          margin: 0,
+        }}>
+          {title}
+        </h2>
+        {/* Hand-drawn underline */}
+        <svg width="60" height="8" viewBox="0 0 60 8" style={{ marginTop: 8 }}>
+          <path
+            d="M2 4 Q15 2 30 5 Q45 8 58 4"
+            stroke={tokens.colors.ink}
+            strokeWidth="2"
+            fill="none"
+            strokeLinecap="round"
           />
-        ) : (
-          <FoodIcons.bowl size={48} />
-        )}
-        <div>
-          <h2 style={{
+        </svg>
+        {description && (
+          <p style={{
             fontFamily: tokens.fonts.hand,
-            fontSize: 28,
-            color: tokens.colors.ink,
-            margin: 0,
+            fontSize: 16,
+            color: tokens.colors.inkLight,
+            fontStyle: 'italic',
+            margin: '12px 0 0 0',
           }}>
-            {title}
-          </h2>
-          {description && (
-            <p style={{
-              fontFamily: tokens.fonts.hand,
-              fontSize: 16,
-              color: tokens.colors.inkLight,
-              fontStyle: 'italic',
-              margin: 0,
-              marginTop: 4,
-            }}>
-              {description}
-            </p>
-          )}
-        </div>
+            {description}
+          </p>
+        )}
       </div>
 
-      {/* Meta info */}
-      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-        {time && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Asterisk size={14} />
-            <span style={{ fontFamily: tokens.fonts.hand, fontSize: 15, color: tokens.colors.inkLight }}>
-              {time}
-            </span>
-          </div>
-        )}
-        {difficulty && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontFamily: tokens.fonts.hand, fontSize: 15, color: tokens.colors.inkLight }}>
-              {difficulty}
-            </span>
-          </div>
-        )}
-        {servings && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {/* Hand-drawn person icon */}
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-              <circle cx="10" cy="5" r="3" stroke={tokens.colors.inkLight} strokeWidth="1.5" fill="none"/>
-              <path d="M4 18 Q4 12 10 12 Q16 12 16 18" stroke={tokens.colors.inkLight} strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-            </svg>
-            <span style={{ fontFamily: tokens.fonts.hand, fontSize: 15, color: tokens.colors.inkLight }}>
-              {typeof servings === 'number'
-                ? `${servings} ${servings > 1 ? 'persone' : 'persona'}`
-                : servings}
-            </span>
-          </div>
-        )}
-      </div>
+      {/* Meta info - LEFT aligned with icons */}
+      {(time || servings || difficulty) && (
+        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+          {time && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M8 2 L8 14 M2 8 L14 8 M4 4 L12 12 M12 4 L4 12" stroke={tokens.colors.inkLight} strokeWidth="1.2" strokeLinecap="round"/>
+              </svg>
+              <span style={{ fontFamily: tokens.fonts.hand, fontSize: 15, color: tokens.colors.inkLight }}>
+                {time}
+              </span>
+            </div>
+          )}
+          {servings && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                <circle cx="10" cy="5" r="3" stroke={tokens.colors.inkLight} strokeWidth="1.5" fill="none"/>
+                <path d="M4 18 Q4 12 10 12 Q16 12 16 18" stroke={tokens.colors.inkLight} strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+              </svg>
+              <span style={{ fontFamily: tokens.fonts.hand, fontSize: 15, color: tokens.colors.inkLight }}>
+                {typeof servings === 'number'
+                  ? `${servings} ${servings > 1 ? 'persone' : 'persona'}`
+                  : servings}
+              </span>
+            </div>
+          )}
+          {difficulty && <DifficultyStars level={difficulty} language={language} />}
+        </div>
+      )}
     </div>
   );
 };
@@ -650,46 +602,32 @@ interface IngredientItemProps extends Ingredient {
 }
 
 /**
- * Singolo ingrediente con checkbox
+ * Singolo ingrediente con asterisco (stile editoriale)
  */
 export const IngredientItem: React.FC<IngredientItemProps> = ({
   amount,
   unit,
   name,
-  checked = false,
-  onChange
 }) => (
   <div
-    onClick={() => onChange?.(!checked)}
     style={{
       display: 'flex',
-      alignItems: 'center',
-      gap: 12,
-      padding: '8px 0',
-      cursor: onChange ? 'pointer' : 'default',
+      alignItems: 'flex-start',
+      gap: 10,
+      marginBottom: 8,
     }}
   >
-    <div style={{
-      width: 18,
-      height: 18,
-      border: `1.5px solid ${tokens.colors.ink}`,
-      borderRadius: 2,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
-    }}>
-      {checked && (
-        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-          <path d="M2 8.5 L6 12.5 L14 3.5" stroke={tokens.colors.ink} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      )}
-    </div>
     <span style={{
       fontFamily: tokens.fonts.hand,
-      fontSize: 17,
-      color: checked ? tokens.colors.inkLight : tokens.colors.ink,
-      textDecoration: checked ? 'line-through' : 'none',
+      fontSize: 19,
+      color: tokens.colors.ink,
+      marginTop: 2,
+    }}>*</span>
+    <span style={{
+      fontFamily: tokens.fonts.hand,
+      fontSize: 19,
+      color: tokens.colors.ink,
+      lineHeight: 1.5,
     }}>
       {amount && <strong>{amount}</strong>}
       {unit && ` ${unit}`}
@@ -705,14 +643,12 @@ interface IngredientsListProps {
 }
 
 /**
- * Lista ingredienti con titolo
+ * Lista ingredienti con titolo (stile editoriale)
  */
 export const IngredientsList: React.FC<IngredientsListProps> = ({
   ingredients = [],
-  checkedItems = [],
-  onToggle
 }) => (
-  <div style={{ marginBottom: 28 }}>
+  <div style={{ marginBottom: 32 }}>
     <div style={{ marginBottom: 16 }}>
       <UnderlinedText>
         <span style={{
@@ -725,18 +661,16 @@ export const IngredientsList: React.FC<IngredientsListProps> = ({
         </span>
       </UnderlinedText>
     </div>
-    <DashedBox>
+    <div>
       {ingredients.map((ing, i) => (
         <IngredientItem
           key={i}
           amount={ing.amount}
           unit={ing.unit}
           name={ing.name}
-          checked={checkedItems.includes(i)}
-          onChange={(checked) => onToggle?.(i, checked)}
         />
       ))}
-    </DashedBox>
+    </div>
   </div>
 );
 
@@ -779,7 +713,7 @@ export const RecipeStep: React.FC<RecipeStepProps> = ({ number, text, tip }) => 
     <div style={{ flex: 1 }}>
       <p style={{
         fontFamily: tokens.fonts.hand,
-        fontSize: 17,
+        fontSize: 19,
         color: tokens.colors.ink,
         margin: 0,
         lineHeight: 1.5,
@@ -848,13 +782,12 @@ export const StepsList: React.FC<StepsListProps> = ({ steps = [] }) => (
  */
 export const RecipeNote: React.FC<MessageProps> = ({ children }) => (
   <div style={{
-    position: 'relative',
     marginTop: 20,
     padding: 16,
     background: '#FFF9E6',
     borderRadius: 8,
+    border: '1px dashed #E8D5A3',
   }}>
-    <ZineDashedBoxSvg color="#E8D5A3" />
     <div style={{ marginBottom: 8 }}>
       <span style={{
         fontFamily: tokens.fonts.hand,
@@ -878,6 +811,51 @@ export const RecipeNote: React.FC<MessageProps> = ({ children }) => (
   </div>
 );
 
+/**
+ * Tips/Consigli della ricetta - versione array
+ * Box giallo con bordo tratteggiato, stile SharePage
+ */
+interface RecipeTipsProps {
+  tips: string[];
+  language?: Language;
+}
+
+export const RecipeTips: React.FC<RecipeTipsProps> = ({ tips, language = 'it' }) => (
+  <div style={{
+    marginTop: 20,
+    padding: 16,
+    background: '#FFF9E6',
+    borderRadius: 8,
+    border: '1px dashed #E8D5A3',
+  }}>
+    <div style={{ marginBottom: 12 }}>
+      <span style={{
+        fontFamily: tokens.fonts.hand,
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: tokens.colors.ink,
+      }}>
+        {t('recipe.tips', language)}
+      </span>
+    </div>
+    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+      {tips.map((tip, i) => (
+        <li key={i} style={{ marginBottom: i < tips.length - 1 ? 8 : 0 }}>
+          <span style={{
+            fontFamily: tokens.fonts.hand,
+            fontSize: 15,
+            color: tokens.colors.inkLight,
+            fontStyle: 'italic',
+            lineHeight: 1.5,
+          }}>
+            {tip}
+          </span>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
 // ============================================
 // 🍳 RECIPE DETAIL (COMPLETE)
 // ============================================
@@ -894,6 +872,7 @@ interface RecipeDetailProps {
   ingredients?: Ingredient[];
   steps?: (string | Step)[];
   note?: string;
+  tips?: string[];  // Array di consigli
   checkedIngredients?: number[];
   onIngredientToggle?: (index: number, checked: boolean) => void;
 }
@@ -913,6 +892,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   ingredients = [],
   steps = [],
   note,
+  tips,
   checkedIngredients = [],
   onIngredientToggle,
 }) => (
@@ -938,7 +918,11 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
 
     <StepsList steps={steps} />
 
-    {note && <RecipeNote>{note}</RecipeNote>}
+    {/* Tips array (preferred) */}
+    {tips && tips.length > 0 && <RecipeTips tips={tips} />}
+
+    {/* Legacy note (fallback) */}
+    {note && !tips?.length && <RecipeNote>{note}</RecipeNote>}
   </div>
 );
 
@@ -988,7 +972,7 @@ export const RecipeInChat: React.FC<RecipeInChatProps> = ({
             border: isSaved ? '1.5px solid #2D2A26' : '1.5px dashed #C4C0B9',
             borderRadius: 8,
             fontFamily: "'Caveat', cursive",
-            fontSize: 17,
+            fontSize: 18,
             cursor: isSaved || isSaving ? 'default' : 'pointer',
             transition: 'all 0.15s',
           }}
@@ -1039,7 +1023,7 @@ export const RecipeInChat: React.FC<RecipeInChatProps> = ({
             border: '1.5px dashed #C4C0B9',
             borderRadius: 8,
             fontFamily: "'Caveat', cursive",
-            fontSize: 17,
+            fontSize: 18,
             cursor: 'pointer',
             transition: 'all 0.15s',
           }}
@@ -1053,6 +1037,269 @@ export const RecipeInChat: React.FC<RecipeInChatProps> = ({
     </div>
   </div>
 );
+
+// ============================================
+// 🍽️ MENU IN CHAT
+// ============================================
+
+interface MenuCourse {
+  type: 'antipasto' | 'primo' | 'secondo' | 'contorno' | 'dolce' | 'aperitivo' | 'digestivo';
+  name: string;
+  description?: string;
+}
+
+interface MenuInChatProps {
+  name: string;
+  occasion?: string;
+  courses: MenuCourse[];
+  winePairing?: string;
+  totalTime?: string;
+  servings?: string;
+  onSave?: () => void;
+  isSaved?: boolean;
+  isSaving?: boolean;
+}
+
+const COURSE_LABELS: Record<string, string> = {
+  aperitivo: 'Aperitivo',
+  antipasto: 'Antipasto',
+  primo: 'Primo',
+  secondo: 'Secondo',
+  contorno: 'Contorno',
+  dolce: 'Dolce',
+  digestivo: 'Digestivo',
+};
+
+const COURSE_ORDER = ['aperitivo', 'antipasto', 'primo', 'secondo', 'contorno', 'dolce', 'digestivo'];
+
+/**
+ * Menu inline nella chat (versione espansa)
+ * Mostra menu completo dentro la conversazione
+ * Include bottone per salvare
+ */
+export const MenuInChat: React.FC<MenuInChatProps> = ({
+  name,
+  occasion,
+  courses,
+  winePairing,
+  totalTime,
+  servings,
+  onSave,
+  isSaved = false,
+  isSaving = false,
+}) => {
+  // Sort courses by type order
+  const sortedCourses = [...courses].sort((a, b) => {
+    const aIndex = COURSE_ORDER.indexOf(a.type);
+    const bIndex = COURSE_ORDER.indexOf(b.type);
+    return aIndex - bIndex;
+  });
+
+  return (
+    <div style={{
+      marginBottom: 24,
+      paddingTop: 8,
+      paddingBottom: 8,
+    }}>
+      {/* Menu header */}
+      <div style={{ marginBottom: 16 }}>
+        <h3 style={{
+          fontFamily: "'Caveat', cursive",
+          fontSize: 32,
+          fontWeight: 700,
+          color: '#2D2A26',
+          margin: 0,
+          lineHeight: 1.1,
+        }}>
+          {name}
+        </h3>
+        {occasion && (
+          <p style={{
+            fontFamily: "'Caveat', cursive",
+            fontSize: 18,
+            color: '#6B6458',
+            margin: '4px 0 0',
+            fontStyle: 'italic',
+          }}>
+            {occasion}
+          </p>
+        )}
+      </div>
+
+      {/* Meta info */}
+      {(totalTime || servings) && (
+        <div style={{
+          display: 'flex',
+          gap: 16,
+          marginBottom: 16,
+          color: '#6B6458',
+          fontFamily: "'Caveat', cursive",
+          fontSize: 17,
+        }}>
+          {servings && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              {servings}
+            </span>
+          )}
+          {totalTime && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12,6 12,12 16,14"/>
+              </svg>
+              {totalTime}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Courses */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+      }}>
+        {sortedCourses.map((course, i) => (
+          <div key={i} style={{
+            padding: '12px 16px',
+            background: '#FAFAF8',
+            borderRadius: 8,
+            border: '1px solid #E8E4DD',
+          }}>
+            <div style={{
+              fontFamily: "'Caveat', cursive",
+              fontSize: 14,
+              color: '#9A9286',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+              marginBottom: 4,
+            }}>
+              {COURSE_LABELS[course.type] || course.type}
+            </div>
+            <div style={{
+              fontFamily: "'Caveat', cursive",
+              fontSize: 22,
+              fontWeight: 600,
+              color: '#2D2A26',
+            }}>
+              {course.name}
+            </div>
+            {course.description && (
+              <div style={{
+                fontFamily: "'Caveat', cursive",
+                fontSize: 17,
+                color: '#6B6458',
+                marginTop: 4,
+                fontStyle: 'italic',
+              }}>
+                {course.description}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Wine pairing */}
+      {winePairing && (
+        <div style={{
+          marginTop: 16,
+          padding: '12px 16px',
+          background: '#FFF9E6',
+          borderRadius: 8,
+          border: '1px dashed #E8D5A3',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 10,
+        }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B7355" strokeWidth="1.5" style={{ flexShrink: 0, marginTop: 2 }}>
+            <path d="M8 22h8"/>
+            <path d="M12 11v11"/>
+            <path d="M5 3h14l-1.5 8a5.5 5.5 0 1 1-11 0L5 3Z"/>
+          </svg>
+          <div>
+            <div style={{
+              fontFamily: "'Caveat', cursive",
+              fontSize: 14,
+              color: '#8B7355',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+              marginBottom: 2,
+            }}>
+              Abbinamento vino
+            </div>
+            <div style={{
+              fontFamily: "'Caveat', cursive",
+              fontSize: 18,
+              color: '#5C4D3C',
+            }}>
+              {winePairing}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save button */}
+      {onSave && (
+        <div style={{ marginTop: 16 }}>
+          <button
+            onClick={onSave}
+            disabled={isSaved || isSaving}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              width: '100%',
+              padding: '10px 16px',
+              background: 'transparent',
+              color: '#2D2A26',
+              border: isSaved ? '1.5px solid #2D2A26' : '1.5px dashed #C4C0B9',
+              borderRadius: 8,
+              fontFamily: "'Caveat', cursive",
+              fontSize: 18,
+              cursor: isSaved || isSaving ? 'default' : 'pointer',
+              transition: 'all 0.15s',
+            }}
+          >
+            {isSaving ? (
+              <>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ animation: 'spin 1s linear infinite' }}>
+                  <circle cx="8" cy="8" r="6" stroke="#2D2A26" strokeWidth="2" strokeDasharray="20 10" />
+                </svg>
+                Salvo...
+              </>
+            ) : isSaved ? (
+              <>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 8L6 11L13 4" stroke="#2D2A26" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Salvato
+              </>
+            ) : (
+              <>
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                  <path
+                    d="M10 17 Q4 12 4 8 Q4 4 7 4 Q9 4 10 6 Q11 4 13 4 Q16 4 16 8 Q16 12 10 17"
+                    stroke="#2D2A26"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                Salva menu
+              </>
+            )}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // ============================================
 // 📦 AI RESPONSE BLOCK
@@ -1198,7 +1445,6 @@ export const NewChatButton: React.FC<{ onClick?: () => void }> = ({ onClick }) =
   <button
     onClick={onClick}
     style={{
-      position: 'relative',
       display: 'flex',
       alignItems: 'center',
       gap: 8,
@@ -1214,7 +1460,6 @@ export const NewChatButton: React.FC<{ onClick?: () => void }> = ({ onClick }) =
       transition: 'all 0.15s',
     }}
   >
-    <ZineDashedBoxSvg color={tokens.colors.inkFaded} />
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path d="M8 2 L8 14 M2 8 L14 8" stroke={tokens.colors.inkLight} strokeWidth="1.5" strokeLinecap="round"/>
     </svg>

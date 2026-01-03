@@ -4,7 +4,8 @@ import {
   ZineText,
   ZineRecipeCard,
   ZineNoteCard,
-  Underline
+  Underline,
+  UnderlinedText
 } from './components/ui/ZineUI';
 import { GustoLogo } from './components/ui/GustoLogo';
 import {
@@ -14,6 +15,8 @@ import {
   QuickReply,
   QuickReplies,
   RecipeInChat,
+  RecipeTips,
+  MenuInChat,
   ConversationListItem,
   NewChatButton,
   tokens
@@ -22,6 +25,7 @@ import { useConversations } from './hooks/useConversations';
 import { useAuth } from './hooks/useAuth';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { useRecipes } from './hooks/useRecipes';
+import { useMenus } from './hooks/useMenus';
 import { usePantry } from './hooks/usePantry';
 import { AuthModal } from './components/auth/AuthModal';
 import { UserMenu, LoginButton } from './components/auth/UserMenu';
@@ -52,6 +56,7 @@ import {
 } from './components/ui/GustoIcons';
 import { getWeeklyThemes } from './config/cuisineThemes';
 import { GlobeModal } from './components/globe/GlobeModal';
+import { ShareModal } from './components/ShareModal';
 
 // Hamburger Icon
 const HamburgerIcon = () => (
@@ -87,52 +92,6 @@ const NavItemBorder = () => (
       stroke="#2D2A26"
       strokeWidth="0.8"
       fill="none"
-      strokeLinecap="round"
-    />
-  </svg>
-);
-
-// Hand-drawn DASHED box border (zine style) - replaces CSS dashed borders
-const ZineDashedBox = ({ color = '#2D2A26', strokeWidth = 1.5 }: { color?: string; strokeWidth?: number }) => (
-  <svg
-    style={{
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: '100%',
-      pointerEvents: 'none',
-    }}
-    viewBox="0 0 100 100"
-    preserveAspectRatio="none"
-    fill="none"
-  >
-    {/* Top edge - irregular dashes */}
-    <path
-      d="M3 2 Q8 1.5 13 2.5 M18 2 Q25 2.8 32 2 M37 2.5 Q45 1.8 53 2.2 M58 2 Q67 2.5 76 1.8 M81 2.3 Q88 2 95 2.5"
-      stroke={color}
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-    />
-    {/* Right edge - irregular dashes */}
-    <path
-      d="M98 5 Q98.5 12 97.8 19 M98.2 26 Q98 35 98.3 44 M97.8 51 Q98.2 60 98 69 M98.3 76 Q97.8 85 98 94"
-      stroke={color}
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-    />
-    {/* Bottom edge - irregular dashes */}
-    <path
-      d="M95 98 Q88 97.5 81 98.2 M74 97.8 Q65 98.3 56 98 M49 98.2 Q40 97.6 31 98 M24 97.8 Q15 98.2 6 98"
-      stroke={color}
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-    />
-    {/* Left edge - irregular dashes */}
-    <path
-      d="M2 94 Q1.8 85 2.3 76 M2 69 Q2.4 60 1.8 51 M2.2 44 Q2 35 2.3 26 M1.8 19 Q2.2 12 2 5"
-      stroke={color}
-      strokeWidth={strokeWidth}
       strokeLinecap="round"
     />
   </svg>
@@ -260,12 +219,22 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [globeModalOpen, setGlobeModalOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareModalUrl, setShareModalUrl] = useState('');
+  const [shareModalRecipeName, setShareModalRecipeName] = useState('');
   const isOnline = useOnlineStatus();
 
   // Helper to open auth modal with scroll to top
   const openAuthModal = () => {
     window.scrollTo(0, 0);
-    openAuthModal();
+    setAuthModalOpen(true);
+  };
+
+  // Callback for shareRecipe to show modal on desktop
+  const handleShowShareModal = (url: string, recipeName: string) => {
+    setShareModalUrl(url);
+    setShareModalRecipeName(recipeName);
+    setShareModalOpen(true);
   };
 
   // Auth hook
@@ -285,6 +254,17 @@ export default function App() {
 
   // State for tracking which recipe is being saved
   const [savingRecipeId, setSavingRecipeId] = useState<string | null>(null);
+
+  // Menus hook
+  const {
+    menus: savedMenus,
+    saveMenu,
+    deleteMenu,
+    isMenuSaved,
+  } = useMenus(token);
+
+  // State for tracking which menu is being saved
+  const [savingMenuId, setSavingMenuId] = useState<string | null>(null);
 
   // Pantry hook
   const {
@@ -609,9 +589,18 @@ export default function App() {
         category?: string;
         time?: string;
         servings?: string;
+        difficulty?: 'facile' | 'media' | 'difficile';
         ingredients: string[];
         steps: string[];
         tips?: string[];
+      } | null = null;
+      let toolMenu: {
+        name: string;
+        occasion?: string;
+        courses: Array<{ type: string; name: string; description?: string }>;
+        winePairing?: string;
+        totalTime?: string;
+        servings?: string;
       } | null = null;
 
       // Smooth display function - keeps running while streaming or has text to show
@@ -690,6 +679,8 @@ export default function App() {
                     const parsed = JSON.parse(toolUseJson);
                     if (currentToolName === 'display_recipe' && parsed.name && parsed.ingredients && parsed.steps) {
                       toolRecipe = parsed;
+                    } else if (currentToolName === 'display_menu' && parsed.name && parsed.courses && Array.isArray(parsed.courses)) {
+                      toolMenu = parsed;
                     } else if (currentToolName === 'suggest_quick_replies' && parsed.replies && Array.isArray(parsed.replies)) {
                       quickRepliesFromAI = parsed.replies.slice(0, 4);
                     }
@@ -747,16 +738,17 @@ export default function App() {
         }
       }
 
-      // Finalize message - use tool recipe if available, otherwise parse from text
+      // Finalize message - use tool recipe/menu if available, otherwise parse from text
       // Pass AI-generated quick replies if available
-      if (fullText || toolRecipe) {
+      if (fullText || toolRecipe || toolMenu) {
         finalizeMessage(
           aiMsgId,
           fullText,
           convId,
           toolRecipe || undefined,
           { language, menuMode, stellatoMode, recuperoMode },
-          quickRepliesFromAI.length > 0 ? quickRepliesFromAI : undefined
+          quickRepliesFromAI.length > 0 ? quickRepliesFromAI : undefined,
+          toolMenu || undefined
         );
       } else {
         // Fallback if no text received
@@ -1063,7 +1055,6 @@ export default function App() {
                     {screen === 'recipes' && t('header.recipes')}
                     {screen === 'pantry' && t('header.pantry')}
                   </ZineText>
-                  <Underline width={screen === 'home' ? 170 : screen === 'chat' ? 150 : 130} />
                 </div>
                 <GustoLogo size={28} />
               </>
@@ -1226,7 +1217,7 @@ export default function App() {
                           left: 0,
                           right: 0,
                           bottom: 0,
-                          zIndex: 99
+                          zIndex: 999
                         }}
                       />
                       {/* Options Panel */}
@@ -1236,7 +1227,7 @@ export default function App() {
                         right: 0,
                         marginTop: 8,
                         minWidth: 150,
-                        zIndex: 100,
+                        zIndex: 1000,
                         background: '#FFFFFF',
                         borderRadius: 4
                       }}>
@@ -1630,7 +1621,7 @@ export default function App() {
                   </p>
                   <p style={{
                     fontFamily: tokens.fonts.hand,
-                    fontSize: 17,
+                    fontSize: 19,
                     color: tokens.colors.inkFaded,
                     marginBottom: 24
                   }}>
@@ -1655,7 +1646,7 @@ export default function App() {
                       <UserMessage key={msg.id}>{msg.content}</UserMessage>
                     ) : (
                       <div key={msg.id}>
-                        {/* Show intro text only if there's a parsed recipe, otherwise full content */}
+                        {/* Show intro text only if there's a parsed recipe/menu, otherwise full content */}
                         {msg.parsedRecipe ? (
                           <>
                             {extractIntroText(msg.content) && (
@@ -1665,10 +1656,12 @@ export default function App() {
                               title={msg.parsedRecipe.name}
                               time={msg.parsedRecipe.time}
                               servings={msg.parsedRecipe.servings}
+                              difficulty={msg.parsedRecipe.difficulty}
                               category={msg.parsedRecipe.category}
                               iconSvg={msg.parsedRecipe.iconSvg}
                               ingredients={msg.parsedRecipe.ingredients.map(ing => ({ name: ing }))}
                               steps={msg.parsedRecipe.steps}
+                              tips={msg.parsedRecipe.tips}
                               onSave={isAuthenticated ? async () => {
                                 setSavingRecipeId(msg.id);
                                 await saveRecipe({
@@ -1677,6 +1670,7 @@ export default function App() {
                                   servings: msg.parsedRecipe!.servings,
                                   ingredients: msg.parsedRecipe!.ingredients,
                                   steps: msg.parsedRecipe!.steps,
+                                  tips: msg.parsedRecipe!.tips,
                                 });
                                 setSavingRecipeId(null);
                               } : undefined}
@@ -1687,9 +1681,39 @@ export default function App() {
                                 ingredients: msg.parsedRecipe!.ingredients,
                                 steps: msg.parsedRecipe!.steps,
                                 tips: msg.parsedRecipe!.tips,
-                              })}
+                              }, handleShowShareModal)}
                               isSaved={isRecipeSaved(msg.parsedRecipe.name)}
                               isSaving={savingRecipeId === msg.id}
+                            />
+                          </>
+                        ) : msg.parsedMenu ? (
+                          <>
+                            {extractIntroText(msg.content) && (
+                              <AIMessage>{extractIntroText(msg.content)}</AIMessage>
+                            )}
+                            <MenuInChat
+                              name={msg.parsedMenu.name}
+                              occasion={msg.parsedMenu.occasion}
+                              courses={msg.parsedMenu.courses}
+                              winePairing={msg.parsedMenu.winePairing}
+                              totalTime={msg.parsedMenu.totalTime}
+                              servings={msg.parsedMenu.servings}
+                              onSave={isAuthenticated ? async () => {
+                                setSavingMenuId(msg.id);
+                                await saveMenu({
+                                  name: msg.parsedMenu!.name,
+                                  occasion: msg.parsedMenu!.occasion,
+                                  courses: msg.parsedMenu!.courses.map(c => ({
+                                    type: c.type,
+                                    name: c.name,
+                                    description: c.description,
+                                  })),
+                                  winePairing: msg.parsedMenu!.winePairing,
+                                });
+                                setSavingMenuId(null);
+                              } : undefined}
+                              isSaved={isMenuSaved(msg.parsedMenu.name)}
+                              isSaving={savingMenuId === msg.id}
                             />
                           </>
                         ) : (
@@ -1748,85 +1772,106 @@ export default function App() {
                     {t('recipes.all')}
                   </button>
 
-                  {/* Recipe Title */}
-                  <ZineText size="xl" style={{ display: 'block', marginBottom: 8 }}>
-                    {recipe.name}
-                  </ZineText>
-                  <Underline width={200} />
-
-                  {/* Time and servings */}
-                  <div style={{ display: 'flex', gap: 20, marginTop: 16, marginBottom: 24 }}>
-                    {recipe.time && (
-                      <ZineText size="sm" style={{ color: tokens.colors.inkLight }}>
-                        {recipe.time}
-                      </ZineText>
-                    )}
-                    {recipe.servings && (
-                      <ZineText size="sm" style={{ color: tokens.colors.inkLight }}>
-                        {recipe.servings}
-                      </ZineText>
-                    )}
+                  {/* Recipe Title - LEFT aligned */}
+                  <div style={{ marginBottom: 16 }}>
+                    <ZineText size="xl" style={{ display: 'block' }}>
+                      {recipe.name}
+                    </ZineText>
+                    {/* Hand-drawn underline */}
+                    <svg width="60" height="8" viewBox="0 0 60 8" style={{ marginTop: 8 }}>
+                      <path
+                        d="M2 4 Q15 2 30 5 Q45 8 58 4"
+                        stroke={tokens.colors.ink}
+                        strokeWidth="2"
+                        fill="none"
+                        strokeLinecap="round"
+                      />
+                    </svg>
                   </div>
 
-                  {/* Ingredients */}
-                  <ZineText size="lg" style={{ display: 'block', marginBottom: 12 }}>
-                    {t('recipe.ingredients') || 'Ingredienti'}
-                  </ZineText>
-                  <DashedBox style={{ marginBottom: 24 }}>
+                  {/* Time and servings - LEFT aligned with icons */}
+                  {(recipe.time || recipe.servings) && (
+                    <div style={{ display: 'flex', gap: 20, marginBottom: 24, flexWrap: 'wrap' }}>
+                      {recipe.time && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                            <path d="M8 2 L8 14 M2 8 L14 8 M4 4 L12 12 M12 4 L4 12" stroke={tokens.colors.inkLight} strokeWidth="1.2" strokeLinecap="round"/>
+                          </svg>
+                          <ZineText size="sm" style={{ color: tokens.colors.inkLight }}>
+                            {recipe.time}
+                          </ZineText>
+                        </div>
+                      )}
+                      {recipe.servings && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                            <circle cx="10" cy="5" r="3" stroke={tokens.colors.inkLight} strokeWidth="1.5" fill="none"/>
+                            <path d="M4 18 Q4 12 10 12 Q16 12 16 18" stroke={tokens.colors.inkLight} strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+                          </svg>
+                          <ZineText size="sm" style={{ color: tokens.colors.inkLight }}>
+                            {recipe.servings}
+                          </ZineText>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Ingredients - with asterisks, no box */}
+                  <div style={{ marginBottom: 16 }}>
+                    <UnderlinedText>
+                      <ZineText size="lg" style={{ fontWeight: 'bold' }}>
+                        {t('recipe.ingredients') || 'Ingredienti'}
+                      </ZineText>
+                    </UnderlinedText>
+                  </div>
+                  <div style={{ marginBottom: 24 }}>
                     {(recipe.ingredients || []).map((ing, i) => (
                       <div key={i} style={{
                         display: 'flex',
-                        alignItems: 'center',
+                        alignItems: 'flex-start',
                         gap: 10,
-                        marginBottom: i < (recipe.ingredients?.length ?? 0) - 1 ? 8 : 0,
+                        marginBottom: 8,
                         fontFamily: tokens.fonts.hand,
-                        fontSize: 17,
+                        fontSize: 19,
                         color: tokens.colors.ink,
                       }}>
-                        <div style={{
-                          width: 16,
-                          height: 16,
-                          border: `1.5px solid ${tokens.colors.ink}`,
-                          borderRadius: 3,
-                          flexShrink: 0,
-                        }} />
-                        {ing}
+                        <span style={{ marginTop: 2 }}>*</span>
+                        <span style={{ lineHeight: 1.5 }}>{ing}</span>
                       </div>
                     ))}
-                  </DashedBox>
+                  </div>
 
                   {/* Steps */}
-                  <ZineText size="lg" style={{ display: 'block', marginBottom: 12 }}>
-                    {t('recipe.steps') || 'Preparazione'}
-                  </ZineText>
+                  <div style={{ marginBottom: 16 }}>
+                    <UnderlinedText>
+                      <ZineText size="lg" style={{ fontWeight: 'bold' }}>
+                        {t('recipe.steps') || 'Preparazione'}
+                      </ZineText>
+                    </UnderlinedText>
+                  </div>
                   <div style={{ marginBottom: 24 }}>
                     {(recipe.steps || []).map((step, i) => (
                       <div key={i} style={{
                         display: 'flex',
-                        gap: 14,
-                        marginBottom: 20,
+                        alignItems: 'flex-start',
+                        gap: 12,
+                        marginBottom: 16,
                       }}>
-                        <div style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: '50%',
-                          border: `1.5px solid ${tokens.colors.ink}`,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
+                        <span style={{
                           fontFamily: tokens.fonts.hand,
-                          fontSize: 16,
+                          fontSize: 20,
+                          fontWeight: 'bold',
                           color: tokens.colors.ink,
+                          minWidth: 24,
                         }}>
-                          {i + 1}
-                        </div>
+                          {i + 1}.
+                        </span>
                         <p style={{
                           fontFamily: tokens.fonts.hand,
-                          fontSize: 17,
+                          fontSize: 19,
                           color: tokens.colors.ink,
                           margin: 0,
-                          lineHeight: 1.5,
+                          lineHeight: 1.6,
                           flex: 1,
                         }}>
                           {formatInlineText(step)}
@@ -1835,8 +1880,13 @@ export default function App() {
                     ))}
                   </div>
 
+                  {/* Tips/Consigli */}
+                  {recipe.tips && recipe.tips.length > 0 && (
+                    <RecipeTips tips={recipe.tips} />
+                  )}
+
                   {/* Actions */}
-                  <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
                     <button
                       onClick={() => toggleRecipeFavorite(recipe.id)}
                       style={{
@@ -1850,7 +1900,7 @@ export default function App() {
                         border: `1.5px dashed ${tokens.colors.inkFaded}`,
                         borderRadius: 8,
                         fontFamily: tokens.fonts.hand,
-                        fontSize: 17,
+                        fontSize: 19,
                         cursor: 'pointer',
                       }}
                     >
@@ -1866,7 +1916,8 @@ export default function App() {
                         servings: recipe.servings,
                         ingredients: recipe.ingredients || [],
                         steps: recipe.steps || [],
-                      })}
+                        tips: recipe.tips,
+                      }, handleShowShareModal)}
                       style={{
                         flex: 1,
                         display: 'flex',
@@ -1878,7 +1929,7 @@ export default function App() {
                         border: `1.5px dashed ${tokens.colors.inkFaded}`,
                         borderRadius: 8,
                         fontFamily: tokens.fonts.hand,
-                        fontSize: 17,
+                        fontSize: 19,
                         cursor: 'pointer',
                       }}
                     >
@@ -1912,7 +1963,7 @@ export default function App() {
                     border: 'none',
                     borderRadius: 8,
                     fontFamily: "'Caveat', cursive",
-                    fontSize: 17,
+                    fontSize: 19,
                     cursor: 'pointer'
                   }}
                 >
@@ -1941,7 +1992,7 @@ export default function App() {
                     border: 'none',
                     borderRadius: 8,
                     fontFamily: "'Caveat', cursive",
-                    fontSize: 17,
+                    fontSize: 19,
                     cursor: 'pointer'
                   }}
                 >
@@ -2108,6 +2159,81 @@ export default function App() {
                 ))}
               </>
             )}
+
+            {/* I tuoi menu */}
+            {isAuthenticated && savedMenus.length > 0 && (
+              <>
+                <ZineText size="lg" underline style={{ display: 'block', marginTop: 32, marginBottom: 20 }}>
+                  I tuoi menu
+                </ZineText>
+
+                {savedMenus.map(menu => (
+                  <div
+                    key={menu.id}
+                    style={{ position: 'relative', marginBottom: 12 }}
+                  >
+                    {/* Menu Card */}
+                    <DashedBox style={{ padding: '16px 20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                        {/* Menu icon */}
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2D2A26" strokeWidth="1.2" style={{ flexShrink: 0, marginTop: 2 }}>
+                          <path d="M3 3h18v18H3z" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M7 7h10M7 11h10M7 15h6" strokeLinecap="round"/>
+                        </svg>
+                        {/* Content */}
+                        <div style={{ flex: 1 }}>
+                          <div style={{
+                            fontFamily: "'Caveat', cursive",
+                            fontSize: 22,
+                            fontWeight: 600,
+                            color: '#2D2A26',
+                            marginBottom: 4,
+                          }}>
+                            {menu.name}
+                          </div>
+                          {menu.occasion && (
+                            <div style={{
+                              fontFamily: "'Caveat', cursive",
+                              fontSize: 16,
+                              color: '#8B857C',
+                              fontStyle: 'italic',
+                              marginBottom: 8,
+                            }}>
+                              {menu.occasion}
+                            </div>
+                          )}
+                          <div style={{
+                            fontFamily: "'Caveat', cursive",
+                            fontSize: 15,
+                            color: '#A8A4A0',
+                          }}>
+                            {menu.courses.length} portate
+                          </div>
+                        </div>
+                      </div>
+                    </DashedBox>
+                    {/* Delete button */}
+                    <button
+                      onClick={() => deleteMenu(menu.id)}
+                      style={{
+                        position: 'absolute',
+                        top: 16,
+                        right: 16,
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 4,
+                        zIndex: 2,
+                      }}
+                    >
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#C4C0B9" strokeWidth="1.5">
+                        <path d="M6 6L14 14M6 14L14 6" strokeLinecap="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </>
+            )}
               </>
             )}
           </div>
@@ -2170,12 +2296,32 @@ export default function App() {
               {capturedPhotos.length < 3 && !isAnalyzingPhoto && (
                 <div style={{
                   position: 'relative',
-                  borderRadius: 12,
                   padding: capturedPhotos.length > 0 ? 16 : 24,
                   textAlign: 'center',
                   cursor: 'pointer',
                 }}>
-                  <ZineDashedBox color="#2D2A26" strokeWidth={1.8} />
+                  {/* Simple hand-drawn border (same as scopri cards) */}
+                  <svg
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      pointerEvents: 'none',
+                    }}
+                    viewBox="0 0 100 100"
+                    preserveAspectRatio="none"
+                    fill="none"
+                  >
+                    <path
+                      d="M2 4 Q0 0 4 2 L96 2 Q100 0 98 4 L98 96 Q100 100 96 98 L4 98 Q0 100 2 96 Z"
+                      stroke="#2D2A26"
+                      strokeWidth="0.8"
+                      fill="none"
+                      strokeLinecap="round"
+                    />
+                  </svg>
                   <input
                     type="file"
                     accept="image/*"
@@ -2680,7 +2826,7 @@ export default function App() {
                             left: 0,
                             right: 0,
                             bottom: 0,
-                            zIndex: 99
+                            zIndex: 999
                           }}
                         />
                         {/* Options Panel */}
@@ -2690,7 +2836,7 @@ export default function App() {
                           right: 0,
                           marginBottom: 8,
                           minWidth: 150,
-                          zIndex: 100,
+                          zIndex: 1000,
                           background: '#FFFFFF',
                           borderRadius: 4
                         }}>
@@ -2865,6 +3011,14 @@ export default function App() {
         onSelectCountry={(country) => {
           sendMessage(`Suggeriscimi un piatto tipico della cucina ${country.toLowerCase()}a con la ricetta completa`);
         }}
+      />
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        shareUrl={shareModalUrl}
+        recipeName={shareModalRecipeName}
       />
     </ZinePage>
   );

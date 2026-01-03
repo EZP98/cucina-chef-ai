@@ -19,20 +19,17 @@ export const HandDrawnFrame = ({ children, width = '100%', height = 'auto', styl
   <div style={{ position: 'relative', width, height, padding: '16px', ...style }}>
     <svg
       style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-      viewBox="0 0 200 200"
+      viewBox="0 0 100 100"
       preserveAspectRatio="none"
       fill="none"
     >
       <path
-        d="M8 12 Q4 8 12 6 L185 8 Q194 6 192 14 L190 186 Q192 194 184 192 L14 188 Q6 190 8 182 Z"
+        d="M2 4 Q0 0 4 2 L96 2 Q100 0 98 4 L98 96 Q100 100 96 98 L4 98 Q0 100 2 96 Z"
         stroke="#2D2A26"
-        strokeWidth="1.5"
+        strokeWidth="0.8"
         fill="none"
         strokeLinecap="round"
-        strokeLinejoin="round"
       />
-      <path d="M6 8 Q2 12 6 16" stroke="#2D2A26" strokeWidth="1" fill="none"/>
-      <path d="M194 8 Q198 12 194 16" stroke="#2D2A26" strokeWidth="1" fill="none"/>
     </svg>
     {children}
   </div>

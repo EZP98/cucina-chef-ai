@@ -72,6 +72,10 @@ export const translations: Record<Language, Record<string, string>> = {
     // Recipe detail
     'recipe.ingredients': 'ingredienti',
     'recipe.steps': 'preparazione',
+    'recipe.tips': 'Consigli',
+    'recipe.easy': 'Facile',
+    'recipe.medium': 'Media',
+    'recipe.hard': 'Difficile',
 
     // Pantry
     'pantry.takePhoto': 'Scatta una foto',
@@ -82,7 +86,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'pantry.useNow': 'usa presto!',
     'pantry.inPantry': 'in dispensa',
     'pantry.shoppingList': 'lista della spesa',
-    'pantry.empty': 'La tua dispensa e vuota',
+    'pantry.empty': 'La tua dispensa è vuota',
     'pantry.emptyHint': 'Scatta una foto per aggiungere ingredienti',
     'pantry.suggestDishes': 'Cosa posso cucinare?',
 
@@ -198,6 +202,10 @@ export const translations: Record<Language, Record<string, string>> = {
     // Recipe detail
     'recipe.ingredients': 'ingredients',
     'recipe.steps': 'preparation',
+    'recipe.tips': 'Tips',
+    'recipe.easy': 'Easy',
+    'recipe.medium': 'Medium',
+    'recipe.hard': 'Hard',
 
     'pantry.takePhoto': 'Take a photo',
     'pantry.analyzing': 'Analyzing photo...',
@@ -320,6 +328,10 @@ export const translations: Record<Language, Record<string, string>> = {
     // Recipe detail
     'recipe.ingredients': '食材',
     'recipe.steps': '做法',
+    'recipe.tips': '小秘訣',
+    'recipe.easy': '簡單',
+    'recipe.medium': '中等',
+    'recipe.hard': '困難',
 
     'pantry.takePhoto': '拍照',
     'pantry.analyzing': '分析照片中...',
@@ -442,6 +454,10 @@ export const translations: Record<Language, Record<string, string>> = {
     // Recipe detail
     'recipe.ingredients': 'ingrédients',
     'recipe.steps': 'préparation',
+    'recipe.tips': 'Conseils',
+    'recipe.easy': 'Facile',
+    'recipe.medium': 'Moyen',
+    'recipe.hard': 'Difficile',
 
     'pantry.takePhoto': 'Prends une photo',
     'pantry.analyzing': 'Analyse en cours...',
@@ -564,6 +580,10 @@ export const translations: Record<Language, Record<string, string>> = {
     // Recipe detail
     'recipe.ingredients': '材料',
     'recipe.steps': '作り方',
+    'recipe.tips': 'コツ',
+    'recipe.easy': '簡単',
+    'recipe.medium': '普通',
+    'recipe.hard': '難しい',
 
     'pantry.takePhoto': '写真を撮る',
     'pantry.analyzing': '写真を分析中...',
@@ -686,6 +706,10 @@ export const translations: Record<Language, Record<string, string>> = {
     // Recipe detail
     'recipe.ingredients': 'ingredientes',
     'recipe.steps': 'preparación',
+    'recipe.tips': 'Consejos',
+    'recipe.easy': 'Fácil',
+    'recipe.medium': 'Media',
+    'recipe.hard': 'Difícil',
 
     'pantry.takePhoto': 'Toma una foto',
     'pantry.analyzing': 'Analizando foto...',

@@ -9,7 +9,8 @@ export interface SavedRecipe {
   servings?: string;
   ingredients: string[];
   steps: string[];
-  note?: string;
+  note?: string;      // Legacy - singola nota
+  tips?: string[];    // Array di consigli
   isFavorite: boolean;
   iconSvg?: string;
   createdAt: number;

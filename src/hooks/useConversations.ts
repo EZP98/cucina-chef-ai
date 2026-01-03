@@ -214,8 +214,9 @@ export function useConversations(token: string | null) {
     }));
   }, [activeId]);
 
-  // Finalize message after streaming (parse recipe + quick replies)
+  // Finalize message after streaming (parse recipe/menu + quick replies)
   // If toolRecipe is provided (from tool use), use that instead of parsing from text
+  // If toolMenu is provided (from tool use), store as parsedMenu
   // aiQuickReplies: if AI generated quick replies via tool, use those; otherwise fallback to local generation
   const finalizeMessage = useCallback((
     messageId: string,
@@ -227,12 +228,21 @@ export function useConversations(token: string | null) {
       category?: string;
       time?: string;
       servings?: string;
+      difficulty?: 'facile' | 'media' | 'difficile';
       ingredients: string[];
       steps: string[];
       tips?: string[];
     },
     quickReplyContext?: Omit<QuickReplyContext, 'response' | 'recipe'>,
-    aiQuickReplies?: string[]
+    aiQuickReplies?: string[],
+    toolMenu?: {
+      name: string;
+      occasion?: string;
+      courses: Array<{ type: string; name: string; description?: string }>;
+      winePairing?: string;
+      totalTime?: string;
+      servings?: string;
+    }
   ) => {
     const targetId = conversationId || activeId;
 
@@ -244,11 +254,28 @@ export function useConversations(token: string | null) {
           category: toolRecipe.category as import('../types/chat').RecipeCategory | undefined,
           time: toolRecipe.time,
           servings: toolRecipe.servings,
+          difficulty: toolRecipe.difficulty,
           ingredients: toolRecipe.ingredients,
           steps: toolRecipe.steps,
           tips: toolRecipe.tips,
         }
       : (parseRecipeFromText(content) ?? undefined);
+
+    // Use tool menu if provided
+    const parsedMenu = toolMenu
+      ? {
+          name: toolMenu.name,
+          occasion: toolMenu.occasion,
+          courses: toolMenu.courses.map(c => ({
+            type: c.type as 'antipasto' | 'primo' | 'secondo' | 'contorno' | 'dolce' | 'aperitivo' | 'digestivo',
+            name: c.name,
+            description: c.description,
+          })),
+          winePairing: toolMenu.winePairing,
+          totalTime: toolMenu.totalTime,
+          servings: toolMenu.servings,
+        }
+      : undefined;
 
     // Use AI-generated quick replies if available, otherwise fallback to local generation
     const quickReplies = aiQuickReplies && aiQuickReplies.length > 0
@@ -268,7 +295,7 @@ export function useConversations(token: string | null) {
           ...conv,
           messages: conv.messages.map(msg =>
             msg.id === messageId
-              ? { ...msg, content, parsedRecipe, quickReplies }
+              ? { ...msg, content, parsedRecipe, parsedMenu, quickReplies }
               : msg
           ),
           updatedAt: Date.now(),

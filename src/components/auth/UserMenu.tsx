@@ -62,8 +62,8 @@ export function UserMenu({ user, onLogout, t }: UserMenuProps) {
         <HandDrawnFrame
           style={{
             position: 'absolute',
-            top: '44px',
-            right: 0,
+            bottom: '44px',
+            left: 0,
             background: '#FAF7F2',
             padding: '12px 16px',
             minWidth: '180px',

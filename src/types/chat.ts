@@ -13,6 +13,7 @@ export interface ParsedRecipe {
   description?: string;
   servings?: string;
   time?: string;
+  difficulty?: 'facile' | 'media' | 'difficile';
   ingredients: string[];
   steps: string[];
   tips?: string[];
@@ -21,12 +22,28 @@ export interface ParsedRecipe {
   iconSvg?: string; // Deprecated: kept for backwards compatibility with saved recipes
 }
 
+export interface MenuCourse {
+  type: 'antipasto' | 'primo' | 'secondo' | 'contorno' | 'dolce' | 'aperitivo' | 'digestivo';
+  name: string;
+  description?: string;
+}
+
+export interface ParsedMenu {
+  name: string;
+  occasion?: string;
+  courses: MenuCourse[];
+  winePairing?: string;
+  totalTime?: string;
+  servings?: string;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
   parsedRecipe?: ParsedRecipe;
+  parsedMenu?: ParsedMenu;
   quickReplies?: string[];
 }
 

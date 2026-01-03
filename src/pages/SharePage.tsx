@@ -134,29 +134,37 @@ export function SharePage({ shareId, onGoToApp }: SharePageProps) {
         margin: '0 auto',
         padding: '24px 20px 100px'
       }}>
-        {/* Title */}
-        <div style={{ marginBottom: '24px', textAlign: 'center' }}>
-          <UnderlinedText>
-            <ZineText size={32} style={{ fontWeight: 'bold' }}>
-              {recipe.name}
-            </ZineText>
-          </UnderlinedText>
+        {/* Title - LEFT aligned */}
+        <div style={{ marginBottom: '16px' }}>
+          <ZineText size={32} style={{ fontWeight: 'bold', display: 'block' }}>
+            {recipe.name}
+          </ZineText>
         </div>
 
-        {/* Meta info */}
+        {/* Meta info - LEFT aligned with icons */}
         {(recipe.time || recipe.servings) && (
           <div style={{
             display: 'flex',
-            justifyContent: 'center',
-            gap: '24px',
+            gap: '20px',
             marginBottom: '32px',
-            color: '#8B857C'
+            flexWrap: 'wrap'
           }}>
             {recipe.time && (
-              <ZineText size="md">{recipe.time}</ZineText>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 2 L8 14 M2 8 L14 8 M4 4 L12 12 M12 4 L4 12" stroke="#8B857C" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+                <ZineText size="md" style={{ color: '#8B857C' }}>{recipe.time}</ZineText>
+              </div>
             )}
             {recipe.servings && (
-              <ZineText size="md">{recipe.servings}</ZineText>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                  <circle cx="10" cy="5" r="3" stroke="#8B857C" strokeWidth="1.5" fill="none"/>
+                  <path d="M4 18 Q4 12 10 12 Q16 12 16 18" stroke="#8B857C" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+                </svg>
+                <ZineText size="md" style={{ color: '#8B857C' }}>{recipe.servings}</ZineText>
+              </div>
             )}
           </div>
         )}

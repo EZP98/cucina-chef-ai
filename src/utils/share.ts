@@ -44,10 +44,13 @@ function isMobile(): boolean {
 }
 
 /**
- * Share a recipe via link
- * Creates a shareable link and opens the share dialog
+ * Create share link and return info for modal (desktop) or share directly (mobile)
+ * Returns { shareUrl, usedModal } - usedModal true if caller should show modal
  */
-export async function shareRecipe(recipe: RecipeData): Promise<boolean> {
+export async function shareRecipe(
+  recipe: RecipeData,
+  onShowModal?: (url: string, recipeName: string) => void
+): Promise<boolean> {
   // Create shareable link
   const shareUrl = await createShareLink(recipe);
 
@@ -74,15 +77,18 @@ export async function shareRecipe(recipe: RecipeData): Promise<boolean> {
     }
   }
 
-  // Desktop: Copy link to clipboard
+  // Desktop: Show modal with link
+  if (!isMobile() && onShowModal) {
+    onShowModal(shareUrl, recipe.name);
+    return true;
+  }
+
+  // Fallback if no modal handler: copy to clipboard
   if (!isMobile()) {
     try {
       await navigator.clipboard.writeText(shareUrl);
-      // Show notification (will be handled by caller)
-      alert(`Link copiato!\n${shareUrl}`);
       return true;
     } catch {
-      // Fallback: open in new tab
       window.open(shareUrl, '_blank');
       return true;
     }

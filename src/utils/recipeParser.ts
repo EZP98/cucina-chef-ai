@@ -196,7 +196,7 @@ export function extractIntroText(text: string): string {
 
     // Stop when we hit ingredients header in any language
     if (
-      lowerLine.match(/^#+\s*\*?\*?[A-Z]/) || // Markdown heading with caps (recipe title)
+      line.match(/^#+\s*\*?\*?[A-Z]/) || // Markdown heading with caps (recipe title)
       lowerLine.includes('ingredienti') ||
       lowerLine.includes('ingredients') ||
       lowerLine.includes('ingrédients') ||

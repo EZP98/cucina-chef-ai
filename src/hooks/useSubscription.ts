@@ -30,6 +30,7 @@ export interface UsageResult {
   limit: number;
   remaining: number;
   isLimitReached: boolean;
+  period: 'day' | 'month';
 }
 
 export interface Usage {

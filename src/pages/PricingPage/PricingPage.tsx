@@ -32,9 +32,12 @@ function PlanCard({ plan, isCurrentPlan, onSelect, isPopular }: PlanCardProps) {
     ? 'Gratis'
     : `${(plan.price_monthly / 100).toFixed(2).replace('.', ',')} /mese`;
 
+  // Free plan: messages per month, paid plans: per day
   const messagesDisplay = plan.messages_per_day === -1
     ? 'Illimitati'
-    : `${plan.messages_per_day}/giorno`;
+    : plan.id === 'free'
+      ? `${plan.messages_per_day}/mese`
+      : `${plan.messages_per_day}/giorno`;
 
   const recipesDisplay = plan.max_saved_recipes === -1
     ? 'Illimitate'
@@ -211,7 +214,7 @@ export default function PricingPage({
               }}>
                 <div>
                   <ZineText size="md">
-                    Messaggi oggi: {usage.messages.count}/{usage.messages.limit === -1 ? 'illimitati' : usage.messages.limit}
+                    Messaggi {usage.messages.period === 'month' ? 'questo mese' : 'oggi'}: {usage.messages.count}/{usage.messages.limit === -1 ? 'illimitati' : usage.messages.limit}
                   </ZineText>
                 </div>
                 <div>

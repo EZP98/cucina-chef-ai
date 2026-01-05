@@ -1,5 +1,5 @@
 // Usage tracking utilities for Cloudflare Workers
-// Tracks daily message limits and other usage
+// Tracks daily/monthly message limits and other usage
 
 import { generateId } from './auth';
 
@@ -8,6 +8,7 @@ export interface UsageResult {
   limit: number;
   remaining: number;
   isLimitReached: boolean;
+  period: 'day' | 'month';
 }
 
 /**
@@ -16,6 +17,14 @@ export interface UsageResult {
 function getTodayDate(): string {
   const now = new Date();
   return now.toISOString().split('T')[0];
+}
+
+/**
+ * Get current month as YYYY-MM string (UTC)
+ */
+function getCurrentMonth(): string {
+  const now = new Date();
+  return now.toISOString().slice(0, 7); // YYYY-MM
 }
 
 /**
@@ -34,6 +43,23 @@ export async function getUsageCount(
   ).bind(userId, action, targetDate).first<{ count: number }>();
 
   return result?.count || 0;
+}
+
+/**
+ * Get monthly usage count for a user and action (sum of all days in current month)
+ */
+export async function getMonthlyUsageCount(
+  db: D1Database,
+  userId: string,
+  action: string
+): Promise<number> {
+  const monthPrefix = getCurrentMonth(); // YYYY-MM
+
+  const result = await db.prepare(
+    'SELECT SUM(count) as total FROM usage_logs WHERE user_id = ? AND action = ? AND date LIKE ?'
+  ).bind(userId, action, `${monthPrefix}%`).first<{ total: number }>();
+
+  return result?.total || 0;
 }
 
 /**
@@ -62,6 +88,8 @@ export async function incrementUsage(
 
 /**
  * Get user's plan and check if action is within limits
+ * Free plan: 3 messages per MONTH
+ * Pro/Premium: messages per DAY
  */
 export async function checkUsageLimit(
   db: D1Database,
@@ -70,13 +98,17 @@ export async function checkUsageLimit(
 ): Promise<UsageResult> {
   // Get user's subscription and plan
   const subscription = await db.prepare(`
-    SELECT p.messages_per_day, p.max_saved_recipes
+    SELECT us.plan_id, p.messages_per_day, p.max_saved_recipes
     FROM user_subscriptions us
     JOIN plans p ON us.plan_id = p.id
     WHERE us.user_id = ? AND us.status = 'active'
-  `).bind(userId).first<{ messages_per_day: number; max_saved_recipes: number }>();
+  `).bind(userId).first<{ plan_id: string; messages_per_day: number; max_saved_recipes: number }>();
 
-  // Default to free plan if no subscription
+  // Determine if this is a free plan (monthly limit) or paid (daily limit)
+  const planId = subscription?.plan_id || 'free';
+  const isFreeMessages = planId === 'free' && action === 'message';
+
+  // Get limit based on plan
   let limit: number;
   if (!subscription) {
     // Free plan defaults
@@ -87,7 +119,10 @@ export async function checkUsageLimit(
       : subscription.max_saved_recipes;
   }
 
-  const count = await getUsageCount(db, userId, action);
+  // Get count: monthly for free messages, daily for everything else
+  const count = isFreeMessages
+    ? await getMonthlyUsageCount(db, userId, action)
+    : await getUsageCount(db, userId, action);
 
   // -1 means unlimited
   const isLimitReached = limit !== -1 && count >= limit;
@@ -98,6 +133,7 @@ export async function checkUsageLimit(
     limit,
     remaining,
     isLimitReached,
+    period: isFreeMessages ? 'month' : 'day',
   };
 }
 

@@ -45,7 +45,8 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe ON user_subscriptions(stripe
 CREATE UNIQUE INDEX IF NOT EXISTS idx_usage_user_action_date ON usage_logs(user_id, action, date);
 
 -- Seed piani
+-- Note: Free plan has 3 messages per MONTH (not day), enforced in usage.ts
 INSERT OR REPLACE INTO plans (id, name, display_name, price_monthly, messages_per_day, max_saved_recipes, features, stripe_price_id) VALUES
-  ('free', 'free', 'Free', 0, 3, 5, '["Ricette base","3 messaggi al giorno","Salva fino a 5 ricette"]', NULL),
+  ('free', 'free', 'Free', 0, 3, 5, '["Ricette base","3 messaggi al mese","Salva fino a 5 ricette"]', NULL),
   ('pro', 'pro', 'Pro', 499, 50, -1, '["50 messaggi al giorno","Ricette illimitate","Modalità Stellato","Priorità risposte"]', NULL),
   ('premium', 'premium', 'Premium', 999, -1, -1, '["Messaggi illimitati","Ricette illimitate","Modalità Stellato","Modalità Recupero","Supporto prioritario"]', NULL);

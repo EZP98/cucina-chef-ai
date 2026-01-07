@@ -171,11 +171,11 @@ export function useConversations(token: string | null) {
     setConversations(prev => {
       return prev.map(conv => {
         if (conv.id === targetId) {
-          const updatedMessages = [...conv.messages, newMessage];
+          const updatedMessages = [...(conv.messages || []), newMessage];
 
           // Update title from first user message
           let newTitle = conv.title;
-          if (role === 'user' && conv.messages.length === 0) {
+          if (role === 'user' && (conv.messages || []).length === 0) {
             newTitle = generateTitle(content);
           }
 
@@ -205,7 +205,7 @@ export function useConversations(token: string | null) {
       if (conv.id === targetId) {
         return {
           ...conv,
-          messages: conv.messages.map(msg =>
+          messages: (conv.messages || []).map(msg =>
             msg.id === messageId ? { ...msg, content } : msg
           ),
         };
@@ -293,7 +293,7 @@ export function useConversations(token: string | null) {
       if (conv.id === targetId) {
         return {
           ...conv,
-          messages: conv.messages.map(msg =>
+          messages: (conv.messages || []).map(msg =>
             msg.id === messageId
               ? { ...msg, content, parsedRecipe, parsedMenu, quickReplies }
               : msg
@@ -316,7 +316,7 @@ export function useConversations(token: string | null) {
       if (conv.id === targetId) {
         return {
           ...conv,
-          messages: conv.messages.map(msg =>
+          messages: (conv.messages || []).map(msg =>
             msg.id === messageId && msg.parsedRecipe
               ? { ...msg, parsedRecipe: { ...msg.parsedRecipe, iconSvg } }
               : msg

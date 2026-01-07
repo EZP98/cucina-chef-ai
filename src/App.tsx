@@ -37,6 +37,7 @@ import { extractIntroText } from './utils/recipeParser';
 import { shareRecipe } from './utils/share';
 import { SharePage } from './pages/SharePage';
 import PricingPage from './pages/PricingPage/PricingPage';
+import SettingsPage from './pages/SettingsPage/SettingsPage';
 import { useSubscription } from './hooks/useSubscription';
 import {
   SketchEgg,
@@ -137,7 +138,7 @@ const CameraIcon = () => (
 );
 
 // Types
-type Screen = 'home' | 'chat' | 'recipes' | 'pantry' | 'share' | 'pricing';
+type Screen = 'home' | 'chat' | 'recipes' | 'pantry' | 'share' | 'pricing' | 'settings';
 
 // UI representation of pantry item (includes illustration component)
 interface PantryItemUI {
@@ -207,6 +208,10 @@ function useRouter() {
 
     if (parts[0] === 'pricing') {
       return { screen: 'pricing' };
+    }
+
+    if (parts[0] === 'settings') {
+      return { screen: 'settings' };
     }
 
     return { screen: 'home' };
@@ -872,6 +877,18 @@ export default function App() {
     );
   }
 
+  // Settings page
+  if (screen === 'settings') {
+    return (
+      <SettingsPage
+        user={user}
+        isAuthenticated={isAuthenticated}
+        onNavigate={navigate}
+        onLogout={logout}
+      />
+    );
+  }
+
   return (
     <ZinePage style={{ padding: 0, minHeight: '100vh' }}>
 
@@ -953,7 +970,7 @@ export default function App() {
             {/* User + Language on same row */}
             <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12 }}>
               {isAuthenticated && user ? (
-                <UserMenu user={user} onLogout={logout} t={t} />
+                <UserMenu user={user} onLogout={logout} onNavigate={navigate} t={t} />
               ) : (
                 <LoginButton onClick={() => openAuthModal()} t={t} />
               )}
@@ -1041,7 +1058,7 @@ export default function App() {
                 {/* User + Language on same row */}
                 <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12 }}>
                   {isAuthenticated && user ? (
-                    <UserMenu user={user} onLogout={logout} t={t} />
+                    <UserMenu user={user} onLogout={logout} onNavigate={navigate} t={t} />
                   ) : (
                     <LoginButton onClick={() => openAuthModal()} t={t} />
                   )}

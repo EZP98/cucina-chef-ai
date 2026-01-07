@@ -6,10 +6,11 @@ import type { User } from '../../hooks/useAuth';
 interface UserMenuProps {
   user: User;
   onLogout: () => void;
+  onNavigate: (path: string) => void;
   t: (key: string) => string;
 }
 
-export function UserMenu({ user, onLogout, t }: UserMenuProps) {
+export function UserMenu({ user, onLogout, onNavigate, t }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -99,6 +100,60 @@ export function UserMenu({ user, onLogout, t }: UserMenuProps) {
               {t('auth.syncedChats')}
             </ZineText>
           </div>
+
+          {/* Profilo button */}
+          <button
+            onClick={() => {
+              onNavigate('/settings');
+              setIsOpen(false);
+            }}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 0',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: "'Caveat', cursive",
+              fontSize: '16px',
+              color: '#2D2A26',
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+              <circle cx="10" cy="6" r="3.5" stroke="#2D2A26" strokeWidth="1.5" fill="none"/>
+              <path d="M3 17 Q3 12 10 12 Q17 12 17 17" stroke="#2D2A26" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+            </svg>
+            Profilo
+          </button>
+
+          {/* Piani button */}
+          <button
+            onClick={() => {
+              onNavigate('/pricing');
+              setIsOpen(false);
+            }}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 0',
+              marginBottom: '8px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: "'Caveat', cursive",
+              fontSize: '16px',
+              color: '#2D2A26',
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+              <path d="M10 2 L12 7 L17 7 L13 10 L15 15 L10 12 L5 15 L7 10 L3 7 L8 7 Z" stroke="#2D2A26" strokeWidth="1.5" fill="none" strokeLinejoin="round"/>
+            </svg>
+            Piani
+          </button>
 
           {/* Logout button */}
           <button

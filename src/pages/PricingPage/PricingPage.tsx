@@ -262,6 +262,44 @@ export default function PricingPage({
           </div>
         )}
 
+        {/* Founder badge for special users */}
+        {subscription?.plan_id === 'founder' && (
+          <HandDrawnFrame style={{
+            padding: '16px 24px',
+            marginBottom: '24px',
+            background: 'linear-gradient(135deg, #FDF6E3 0%, #FAF0D7 100%)',
+            textAlign: 'center',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+              <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+                <path
+                  d="M6 22L8 12L12 16L16 8L20 16L24 12L26 22H6Z"
+                  stroke="#D4AF37"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+                <path
+                  d="M6 22H26V25C26 25.5 25.5 26 25 26H7C6.5 26 6 25.5 6 25V22Z"
+                  stroke="#D4AF37"
+                  strokeWidth="2"
+                  fill="none"
+                />
+                <circle cx="8" cy="12" r="2" fill="#D4AF37" />
+                <circle cx="16" cy="8" r="2" fill="#D4AF37" />
+                <circle cx="24" cy="12" r="2" fill="#D4AF37" />
+              </svg>
+              <ZineText size="xl" style={{ color: '#D4AF37' }}>
+                Founder
+              </ZineText>
+            </div>
+            <ZineText size="md" style={{ color: '#8B857C', marginTop: '4px' }}>
+              Accesso illimitato a tutte le funzioni
+            </ZineText>
+          </HandDrawnFrame>
+        )}
+
         {isLoading ? (
           <div style={{ textAlign: 'center', padding: '48px' }}>
             <ZineText size="lg">Caricamento...</ZineText>
@@ -272,7 +310,9 @@ export default function PricingPage({
             gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
             gap: '24px',
           }}>
-            {plans.map(plan => (
+            {(plans || [])
+              .filter(plan => plan.id !== 'founder') // Hide internal founder plan
+              .map(plan => (
               <PlanCard
                 key={plan.id}
                 plan={plan}

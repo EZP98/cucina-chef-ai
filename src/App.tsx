@@ -306,6 +306,7 @@ export default function App() {
     conversations,
     activeId,
     messages,
+    isLoaded,
     createConversation,
     deleteConversation,
     setActiveConversation,
@@ -322,8 +323,8 @@ export default function App() {
       const conv = conversations.find(c => c.id === routeId);
       if (conv) {
         setActiveConversation(routeId);
-      } else if (conversations.length > 0) {
-        // Conversation not found - redirect to chat list
+      } else if (isLoaded && conversations.length > 0) {
+        // Conversation not found (after loading complete) - redirect to chat list
         navigate('/chat');
       }
     }
@@ -331,7 +332,7 @@ export default function App() {
     if (screen === 'chat' && !routeId && activeId) {
       setActiveConversation(null);
     }
-  }, [screen, routeId, conversations, activeId, setActiveConversation, navigate]);
+  }, [screen, routeId, conversations, activeId, setActiveConversation, navigate, isLoaded]);
 
   // Select a conversation
   const selectConversation = (convId: string) => {

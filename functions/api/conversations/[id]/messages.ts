@@ -16,6 +16,29 @@ interface MessageRow {
   quick_replies: string | null;
 }
 
+// Sanitize parsed recipe to handle corrupted data
+function sanitizeRecipe(recipe: unknown): unknown {
+  if (!recipe || typeof recipe !== 'object') return recipe;
+
+  const r = recipe as Record<string, unknown>;
+
+  // Ensure tips is always an array (fix corrupted data where tips is a string)
+  if (r.tips && typeof r.tips === 'string') {
+    try {
+      r.tips = JSON.parse(r.tips as string);
+    } catch {
+      // If it can't be parsed, wrap in array or set to empty
+      r.tips = [];
+    }
+  }
+
+  // Ensure ingredients and steps are arrays
+  if (r.ingredients && !Array.isArray(r.ingredients)) r.ingredients = [];
+  if (r.steps && !Array.isArray(r.steps)) r.steps = [];
+
+  return r;
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -62,7 +85,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         role: m.role,
         content: m.content,
         timestamp: m.timestamp,
-        parsedRecipe: m.parsed_recipe ? JSON.parse(m.parsed_recipe) : undefined,
+        parsedRecipe: m.parsed_recipe ? sanitizeRecipe(JSON.parse(m.parsed_recipe)) : undefined,
         quickReplies: m.quick_replies ? JSON.parse(m.quick_replies) : undefined,
       })),
     }), {

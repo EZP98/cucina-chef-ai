@@ -29,10 +29,8 @@ const coordsToPath = (coords, rotationX, rotationY, radius) => {
   let lastVisible = false;
   for (let i = 0; i < coords.length; i++) {
     const [lng, lat] = coords[i];
-    const { x, y, visible, depth } = project(lat, lng, rotationX, rotationY, radius);
-    // Use depth threshold to prevent back-face artifacts
-    const isVisible = visible && depth > 0.1;
-    if (isVisible) {
+    const { x, y, visible } = project(lat, lng, rotationX, rotationY, radius);
+    if (visible) {
       path += (lastVisible ? 'L' : 'M') + x.toFixed(1) + ',' + y.toFixed(1) + ' ';
       lastVisible = true;
     } else {
@@ -165,7 +163,7 @@ export default function GustoGlobe({ isOpen = true, onClose, onSelectCountry, on
           <circle cx={center} cy={center} r={radius} fill={ocean} stroke={ink} strokeWidth={0.3} />
           <g clipPath="url(#globe-clip-inline)">
             <g transform={`translate(${center},${center})`}>
-            {countryPaths.filter(c => c.visible && c.centroid.depth > 0).map(({ name, paths, id }) => (
+            {countryPaths.filter(c => c.visible && c.centroid.depth > 0.25).map(({ name, paths, id }) => (
               <g key={id} onClick={() => setSelectedCountry(name)} onMouseEnter={() => setHoveredCountry(name)} onMouseLeave={() => setHoveredCountry(null)}>
                 {paths.map((d, i) => (
                   <path
@@ -251,9 +249,15 @@ export default function GustoGlobe({ isOpen = true, onClose, onSelectCountry, on
             viewBox={`${viewBoxOffset} ${viewBoxOffset} ${viewBoxSize} ${viewBoxSize}`}
             style={{ background: paper }}
           >
+            <defs>
+              <clipPath id="globe-clip-modal">
+                <circle cx={center} cy={center} r={radius} />
+              </clipPath>
+            </defs>
             <circle cx={center} cy={center} r={radius} fill={ocean} stroke={ink} strokeWidth={Math.max(0.15, 0.3 / zoom)} />
-            <g transform={`translate(${center},${center})`}>
-              {countryPaths.filter(c => c.visible && c.centroid.depth > 0).map(({ name, paths, id }) => (
+            <g clipPath="url(#globe-clip-modal)">
+              <g transform={`translate(${center},${center})`}>
+              {countryPaths.filter(c => c.visible && c.centroid.depth > 0.25).map(({ name, paths, id }) => (
                 <g key={id} onClick={() => { setSelectedCountry(name); setSelectedCity(null); if (onSelectCountry) { onSelectCountry(name); if (onClose) onClose(); } }} onMouseEnter={() => setHoveredCountry(name)} onMouseLeave={() => setHoveredCountry(null)}>
                   {paths.map((d, i) => (
                     <path
@@ -302,6 +306,7 @@ export default function GustoGlobe({ isOpen = true, onClose, onSelectCountry, on
                   )}
                 </g>
               ))}
+              </g>
             </g>
             <circle cx={center} cy={center} r={radius} fill="none" stroke={ink} strokeWidth={Math.max(0.8, 1.5 / zoom)} />
           </svg>

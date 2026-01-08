@@ -222,7 +222,7 @@ export function SharePage({ shareId, onGoToApp }: SharePageProps) {
         </section>
 
         {/* Tips */}
-        {recipe.tips && recipe.tips.length > 0 && (
+        {recipe.tips && Array.isArray(recipe.tips) && recipe.tips.length > 0 && (
           <section style={{
             marginBottom: '32px',
             padding: '16px',

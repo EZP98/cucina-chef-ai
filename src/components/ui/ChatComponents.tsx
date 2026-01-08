@@ -918,8 +918,8 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
 
     <StepsList steps={steps} />
 
-    {/* Tips array (preferred) */}
-    {tips && tips.length > 0 && <RecipeTips tips={tips} />}
+    {/* Tips array (preferred) - ensure it's actually an array */}
+    {tips && Array.isArray(tips) && tips.length > 0 && <RecipeTips tips={tips} />}
 
     {/* Legacy note (fallback) */}
     {note && !tips?.length && <RecipeNote>{note}</RecipeNote>}

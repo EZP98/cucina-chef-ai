@@ -55,7 +55,8 @@ import {
   IconChat,
   IconRicette,
   IconDispensa,
-  IconCamera
+  IconCamera,
+  IconMondo
 } from './components/ui/GustoIcons';
 import { getWeeklyThemes } from './config/cuisineThemes';
 import { GlobeModal } from './components/globe/GlobeModal';
@@ -132,13 +133,17 @@ const NavPantry = ({ active }: { active: boolean }) => (
   <IconDispensa size={26} color={active ? "#2D2A26" : "#A8A4A0"} fill={active ? "#FAF7F2" : "transparent"} />
 );
 
+const NavMondo = ({ active }: { active: boolean }) => (
+  <IconMondo size={26} color={active ? "#2D2A26" : "#A8A4A0"} fill={active ? "#FAF7F2" : "transparent"} />
+);
+
 // Camera Icon - wrapper for consistent styling
 const CameraIcon = () => (
   <IconCamera size={24} color="currentColor" fill="transparent" />
 );
 
 // Types
-type Screen = 'home' | 'chat' | 'recipes' | 'pantry' | 'share' | 'pricing' | 'settings';
+type Screen = 'home' | 'chat' | 'recipes' | 'pantry' | 'mondo' | 'share' | 'pricing' | 'settings';
 
 // UI representation of pantry item (includes illustration component)
 interface PantryItemUI {
@@ -212,6 +217,10 @@ function useRouter() {
 
     if (parts[0] === 'settings') {
       return { screen: 'settings' };
+    }
+
+    if (parts[0] === 'mondo') {
+      return { screen: 'mondo' };
     }
 
     return { screen: 'home' };
@@ -860,6 +869,7 @@ export default function App() {
     { id: 'chat' as Screen, label: t('nav.chat'), Icon: NavChat },
     { id: 'recipes' as Screen, label: t('nav.recipes'), Icon: NavBook },
     { id: 'pantry' as Screen, label: t('nav.pantry'), Icon: NavPantry },
+    { id: 'mondo' as Screen, label: t('nav.mondo'), Icon: NavMondo },
   ];
 
   // Share page - standalone public view (no auth, no nav)
@@ -891,7 +901,7 @@ export default function App() {
   }
 
   return (
-    <ZinePage style={{ padding: 0, minHeight: '100vh' }}>
+    <ZinePage style={{ padding: 0, minHeight: '100vh', background: screen === 'mondo' ? 'none' : '#FAF7F2' }}>
 
       {/* Desktop Sidebar */}
       {!isMobile && (
@@ -1084,7 +1094,8 @@ export default function App() {
         width: '100%',
         minHeight: '100vh',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        background: screen === 'mondo' ? 'transparent' : undefined
       }}>
         {/* Header */}
         <header style={{
@@ -1115,6 +1126,7 @@ export default function App() {
                     {screen === 'chat' && t('header.chat')}
                     {screen === 'recipes' && t('header.recipes')}
                     {screen === 'pantry' && t('header.pantry')}
+                    {screen === 'mondo' && t('nav.mondo')}
                   </ZineText>
                 </div>
                 <GustoLogo size={28} />
@@ -2174,7 +2186,7 @@ export default function App() {
             {isAuthenticated && savedRecipes.length > 0 && (
               <>
                 {/* Tutte */}
-                <ZineText size="lg" underline style={{ display: 'block', marginBottom: 20 }}>
+                <ZineText size="lg" style={{ display: 'block', marginBottom: 20 }}>
                   {t('recipes.all')}
                 </ZineText>
 
@@ -2224,7 +2236,7 @@ export default function App() {
             {/* I tuoi menu */}
             {isAuthenticated && savedMenus.length > 0 && (
               <>
-                <ZineText size="lg" underline style={{ display: 'block', marginTop: 32, marginBottom: 20 }}>
+                <ZineText size="lg" style={{ display: 'block', marginTop: 32, marginBottom: 20 }}>
                   I tuoi menu
                 </ZineText>
 
@@ -2730,6 +2742,20 @@ export default function App() {
 
           </div>
         )}
+
+        {/* ============ MONDO ============ */}
+        {screen === 'mondo' && (
+          <GlobeModal
+            isOpen={true}
+            onClose={() => {}}
+            onSelectCountry={() => {}}
+            onAskQuestion={(question) => {
+              navigate('/chat');
+              setTimeout(() => sendMessage(question), 100);
+            }}
+            inline={true}
+          />
+        )}
         </main>
 
         {/* Fixed Chat Input - Only on chat screen with active conversation */}
@@ -3071,6 +3097,10 @@ export default function App() {
         onClose={() => setGlobeModalOpen(false)}
         onSelectCountry={(country) => {
           sendMessage(`Suggeriscimi un piatto tipico della cucina ${country.toLowerCase()}a con la ricetta completa`);
+        }}
+        onAskQuestion={(question) => {
+          setGlobeModalOpen(false);
+          sendMessage(question);
         }}
       />
 

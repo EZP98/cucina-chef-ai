@@ -1438,6 +1438,17 @@ export const IconDispensa = ({ size = 48, color = tokens.ink, fill = tokens.pape
   </svg>
 );
 
+// MONDO / GLOBE
+export const IconMondo = ({ size = 48, color = tokens.ink, fill = tokens.paper }) => (
+  <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+    <circle cx="24" cy="24" r="16" stroke={color} strokeWidth="1.5" fill={fill}/>
+    <ellipse cx="24" cy="24" rx="7" ry="16" stroke={color} strokeWidth="1.3"/>
+    <path d="M8 24 L40 24" stroke={color} strokeWidth="1.3"/>
+    <path d="M11 16 C16 16.5, 32 16.5, 37 16" stroke={color} strokeWidth="1.2"/>
+    <path d="M11 32 C16 31.5, 32 31.5, 37 32" stroke={color} strokeWidth="1.2"/>
+  </svg>
+);
+
 // MACCHINA FOTOGRAFICA
 export const IconCamera = ({ size = 48, color = tokens.ink, fill = tokens.paper }) => (
   <svg width={size} height={size} viewBox="0 0 48 48" fill="none">

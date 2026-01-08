@@ -27,6 +27,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'nav.chat': 'Chat',
     'nav.recipes': 'Ricette',
     'nav.pantry': 'Dispensa',
+    'nav.mondo': 'Mondo',
     'nav.menu': 'Menu',
 
     // Home
@@ -160,6 +161,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'nav.chat': 'Chat',
     'nav.recipes': 'Recipes',
     'nav.pantry': 'Pantry',
+    'nav.mondo': 'World',
     'nav.menu': 'Menu',
 
     'home.placeholder': 'Tell me what you\'d like to eat, what\'s in your fridge, or ask for advice...',
@@ -286,6 +288,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'nav.chat': '聊天',
     'nav.recipes': '食譜',
     'nav.pantry': '食材庫',
+    'nav.mondo': '世界',
     'nav.menu': '菜單',
 
     'home.placeholder': '告訴我你想吃什麼、冰箱裡有什麼，或者請我給建議...',
@@ -412,6 +415,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'nav.chat': 'Chat',
     'nav.recipes': 'Recettes',
     'nav.pantry': 'Garde-manger',
+    'nav.mondo': 'Monde',
     'nav.menu': 'Menu',
 
     'home.placeholder': 'Dis-moi ce que tu as envie de manger, ce qu\'il y a dans ton frigo, ou demande un conseil...',
@@ -538,6 +542,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'nav.chat': 'チャット',
     'nav.recipes': 'レシピ',
     'nav.pantry': '食材庫',
+    'nav.mondo': '世界',
     'nav.menu': 'メニュー',
 
     'home.placeholder': '食べたいもの、冷蔵庫の中身、またはアドバイスを聞いてください...',

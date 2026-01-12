@@ -1,6 +1,5 @@
-import React, { useState, useRef, useMemo, useCallback, useEffect, Suspense } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import Globe from 'react-globe.gl';
 import * as THREE from 'three';
 import CulinaryPanel from './CulinaryPanel';
 
@@ -9,238 +8,11 @@ const colors = {
   ink: '#2D2A26',
   paper: '#FAF7F2',
   ocean: '#FDF9F3',
-  land: '#D4C4B0',
-  landHover: '#C9B8A1',
+  land: '#F0EBE1',
+  landHover: '#E8E0D3',
   highlight: '#E07A5F',
-  border: '#B8A992'
+  border: '#C5B9A8'
 };
-
-// Convert lat/lng to 3D position on sphere
-function latLngToVector3(lat, lng, radius = 1) {
-  const phi = (90 - lat) * (Math.PI / 180);
-  const theta = (lng + 180) * (Math.PI / 180);
-  const x = -(radius * Math.sin(phi) * Math.cos(theta));
-  const z = radius * Math.sin(phi) * Math.sin(theta);
-  const y = radius * Math.cos(phi);
-  return [x, y, z];
-}
-
-// Convert GeoJSON to 3D points for point cloud rendering
-function geoJsonToPoints(features, radius) {
-  const points = [];
-  const countryBounds = []; // Store country info for hit detection
-
-  features.forEach((feature) => {
-    const geometry = feature.geometry;
-    const countryName = feature.properties?.NAME || feature.properties?.ADMIN || 'Unknown';
-    if (!geometry) return;
-
-    const countryPoints = [];
-
-    const processCoordinates = (coords) => {
-      for (let i = 0; i < coords.length; i++) {
-        const [lng, lat] = coords[i];
-        const [x, y, z] = latLngToVector3(lat, lng, radius);
-        points.push(x, y, z);
-        countryPoints.push({ lat, lng });
-      }
-    };
-
-    const processPolygon = (polygon) => {
-      polygon.forEach((ring) => processCoordinates(ring));
-    };
-
-    if (geometry.type === 'Polygon') {
-      processPolygon(geometry.coordinates);
-    } else if (geometry.type === 'MultiPolygon') {
-      geometry.coordinates.forEach((polygon) => processPolygon(polygon));
-    }
-
-    if (countryPoints.length > 0) {
-      // Calculate centroid for hit detection
-      const avgLat = countryPoints.reduce((sum, p) => sum + p.lat, 0) / countryPoints.length;
-      const avgLng = countryPoints.reduce((sum, p) => sum + p.lng, 0) / countryPoints.length;
-      countryBounds.push({
-        name: countryName,
-        centroid: { lat: avgLat, lng: avgLng },
-        points: countryPoints
-      });
-    }
-  });
-
-  return {
-    points: new Float32Array(points),
-    countries: countryBounds
-  };
-}
-
-// Generate ocean grid points
-function generateOceanPoints(radius) {
-  const points = [];
-  const step = 6; // degrees
-
-  for (let lat = -80; lat <= 80; lat += step) {
-    for (let lng = -180; lng < 180; lng += step) {
-      const [x, y, z] = latLngToVector3(lat, lng, radius);
-      points.push(x, y, z);
-    }
-  }
-
-  return new Float32Array(points);
-}
-
-// Find closest country to a lat/lng point
-function findClosestCountry(lat, lng, countries) {
-  let closest = null;
-  let minDist = Infinity;
-
-  for (const country of countries) {
-    // Simple distance check to centroid
-    const dLat = country.centroid.lat - lat;
-    const dLng = country.centroid.lng - lng;
-    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
-
-    if (dist < minDist && dist < 15) { // Within 15 degrees
-      minDist = dist;
-      closest = country.name;
-    }
-  }
-
-  return closest;
-}
-
-// Point-in-polygon for more accurate detection
-function pointInCountry(lat, lng, country) {
-  // Check if point is within any polygon ring of the country
-  for (let i = 0; i < country.points.length - 1; i++) {
-    const p1 = country.points[i];
-    const p2 = country.points[i + 1];
-    // Simple proximity check
-    const dist = Math.sqrt(Math.pow(lat - p1.lat, 2) + Math.pow(lng - p1.lng, 2));
-    if (dist < 5) return true;
-  }
-  return false;
-}
-
-// Globe content component
-function GlobeContent({ geoData, selectedCountry, hoveredCountry, onSelectCountry, onHoverCountry }) {
-  const globeRef = useRef();
-  const sphereRef = useRef();
-  const { raycaster, camera } = useThree();
-  const radius = 1;
-  const currentSpeed = useRef(0.1);
-
-  // Process GeoJSON data
-  const { landPoints, oceanPoints, countries } = useMemo(() => {
-    if (!geoData?.features) {
-      return { landPoints: new Float32Array(0), oceanPoints: generateOceanPoints(radius * 0.99), countries: [] };
-    }
-    const { points, countries } = geoJsonToPoints(geoData.features, radius);
-    return {
-      landPoints: points,
-      oceanPoints: generateOceanPoints(radius * 0.99),
-      countries
-    };
-  }, [geoData]);
-
-  // Auto rotate
-  useFrame((_, delta) => {
-    if (globeRef.current) {
-      const targetSpeed = selectedCountry ? 0.02 : 0.1;
-      currentSpeed.current += (targetSpeed - currentSpeed.current) * 0.02;
-      globeRef.current.rotation.y += delta * currentSpeed.current;
-    }
-  });
-
-  // Handle click on globe
-  const handleClick = useCallback((event) => {
-    if (!sphereRef.current) return;
-
-    const intersects = raycaster.intersectObject(sphereRef.current);
-    if (intersects.length > 0) {
-      const point = intersects[0].point;
-      // Convert 3D point back to lat/lng
-      const r = Math.sqrt(point.x * point.x + point.y * point.y + point.z * point.z);
-      const lat = Math.asin(point.y / r) * (180 / Math.PI);
-      const lng = Math.atan2(point.z, -point.x) * (180 / Math.PI) - 180;
-
-      // Find country at this position
-      const country = findClosestCountry(lat, lng, countries);
-      if (country) {
-        onSelectCountry(country);
-      }
-    }
-  }, [raycaster, countries, onSelectCountry]);
-
-  // Handle hover
-  const handlePointerMove = useCallback((event) => {
-    if (!sphereRef.current) return;
-
-    const intersects = raycaster.intersectObject(sphereRef.current);
-    if (intersects.length > 0) {
-      const point = intersects[0].point;
-      const r = Math.sqrt(point.x * point.x + point.y * point.y + point.z * point.z);
-      const lat = Math.asin(point.y / r) * (180 / Math.PI);
-      const lng = Math.atan2(point.z, -point.x) * (180 / Math.PI) - 180;
-
-      const country = findClosestCountry(lat, lng, countries);
-      onHoverCountry(country);
-    } else {
-      onHoverCountry(null);
-    }
-  }, [raycaster, countries, onHoverCountry]);
-
-  return (
-    <group ref={globeRef}>
-      {/* Ocean background points */}
-      <points>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            args={[oceanPoints, 3]}
-          />
-        </bufferGeometry>
-        <pointsMaterial
-          size={0.012}
-          color={colors.border}
-          transparent
-          opacity={0.3}
-          sizeAttenuation
-        />
-      </points>
-
-      {/* Land points (countries) */}
-      {landPoints.length > 0 && (
-        <points>
-          <bufferGeometry>
-            <bufferAttribute
-              attach="attributes-position"
-              args={[landPoints, 3]}
-            />
-          </bufferGeometry>
-          <pointsMaterial
-            size={0.015}
-            color={colors.land}
-            transparent
-            opacity={0.9}
-            sizeAttenuation
-          />
-        </points>
-      )}
-
-      {/* Invisible sphere for raycasting/click detection */}
-      <mesh
-        ref={sphereRef}
-        onClick={handleClick}
-        onPointerMove={handlePointerMove}
-        onPointerOut={() => onHoverCountry(null)}
-      >
-        <sphereGeometry args={[radius, 64, 64]} />
-        <meshBasicMaterial transparent opacity={0} />
-      </mesh>
-    </group>
-  );
-}
 
 // Main exported component
 export default function GustoGlobe3D({
@@ -250,9 +22,10 @@ export default function GustoGlobe3D({
   onAskQuestion,
   inline = false
 }) {
+  const globeRef = useRef();
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [hoveredCountry, setHoveredCountry] = useState(null);
-  const [geoData, setGeoData] = useState(null);
+  const [geoData, setGeoData] = useState({ features: [] });
 
   // Load GeoJSON data
   useEffect(() => {
@@ -262,16 +35,78 @@ export default function GustoGlobe3D({
       .catch(console.error);
   }, []);
 
-  const handleSelectCountry = useCallback((country) => {
-    setSelectedCountry(country);
-    if (onSelectCountryProp) {
-      onSelectCountryProp(country);
+  // Auto-rotate
+  useEffect(() => {
+    if (globeRef.current) {
+      globeRef.current.controls().autoRotate = true;
+      globeRef.current.controls().autoRotateSpeed = 0.5;
+    }
+  }, [geoData]);
+
+  // Stop rotation when country selected
+  useEffect(() => {
+    if (globeRef.current) {
+      globeRef.current.controls().autoRotate = !selectedCountry;
+    }
+  }, [selectedCountry]);
+
+  const handleSelectCountry = useCallback((polygon) => {
+    if (polygon) {
+      const name = polygon.properties?.NAME || polygon.properties?.ADMIN;
+      setSelectedCountry(name);
+      if (onSelectCountryProp) {
+        onSelectCountryProp(name);
+      }
     }
   }, [onSelectCountryProp]);
 
+  const handleHoverCountry = useCallback((polygon) => {
+    const name = polygon?.properties?.NAME || polygon?.properties?.ADMIN || null;
+    setHoveredCountry(name);
+  }, []);
+
+  const getPolygonColor = useCallback((d) => {
+    const name = d.properties?.NAME || d.properties?.ADMIN;
+    if (selectedCountry === name) return colors.highlight;
+    if (hoveredCountry === name) return colors.landHover;
+    return colors.land;
+  }, [selectedCountry, hoveredCountry]);
+
+  // Globe material (ocean color)
+  const globeMaterial = useMemo(() => {
+    return new THREE.MeshBasicMaterial({ color: colors.ocean });
+  }, []);
+
   if (!isOpen) return null;
 
-  // Inline mode - globe integrato nell'app
+  const globeSize = inline ? 'min(500px, 90vw)' : Math.min(window.innerWidth - 40, 500);
+
+  const globeElement = (
+    <Globe
+      ref={globeRef}
+      width={typeof globeSize === 'string' ? 500 : globeSize}
+      height={typeof globeSize === 'string' ? 500 : globeSize}
+      backgroundColor="rgba(0,0,0,0)"
+      globeImageUrl={null}
+      showGlobe={true}
+      showAtmosphere={false}
+      globeMaterial={globeMaterial}
+
+      // Polygon styling
+      polygonsData={geoData.features}
+      polygonCapColor={getPolygonColor}
+      polygonSideColor={() => colors.land}
+      polygonStrokeColor={() => colors.border}
+      polygonAltitude={0.005}
+      polygonsTransitionDuration={200}
+
+      // Interactivity
+      onPolygonClick={handleSelectCountry}
+      onPolygonHover={handleHoverCountry}
+    />
+  );
+
+  // Inline mode
   if (inline) {
     return (
       <div style={{
@@ -282,41 +117,18 @@ export default function GustoGlobe3D({
         width: '100%',
         padding: '20px 0'
       }}>
-        <div
-          style={{
-            width: 'min(500px, 90vw)',
-            height: 'min(500px, 90vw)',
-            background: colors.paper,
-            borderRadius: 16
-          }}
-        >
-          <Canvas
-            camera={{ position: [0, 0, 2.8], fov: 45 }}
-            style={{ background: 'transparent' }}
-            gl={{ antialias: true, toneMapping: THREE.NoToneMapping }}
-            flat
-          >
-            <Suspense fallback={null}>
-              <GlobeContent
-                geoData={geoData}
-                selectedCountry={selectedCountry}
-                hoveredCountry={hoveredCountry}
-                onSelectCountry={handleSelectCountry}
-                onHoverCountry={setHoveredCountry}
-              />
-              <OrbitControls
-                enablePan={false}
-                enableZoom={true}
-                minDistance={1.8}
-                maxDistance={4}
-                rotateSpeed={0.5}
-                zoomSpeed={0.5}
-              />
-            </Suspense>
-          </Canvas>
+        <div style={{
+          width: globeSize,
+          height: globeSize,
+          background: colors.paper,
+          borderRadius: 16,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          {globeElement}
         </div>
 
-        {/* Hovered country indicator */}
         {hoveredCountry && !selectedCountry && (
           <div style={{
             fontFamily: "'Caveat', cursive",
@@ -348,8 +160,6 @@ export default function GustoGlobe3D({
       </div>
     );
   }
-
-  const canvasSize = Math.min(window.innerWidth - 40, 500);
 
   // Modal mode
   return (
@@ -399,7 +209,7 @@ export default function GustoGlobe3D({
               lineHeight: 1
             }}
           >
-            x
+            ×
           </button>
         )}
       </div>
@@ -411,44 +221,20 @@ export default function GustoGlobe3D({
         flexWrap: 'wrap',
         justifyContent: 'center'
       }}>
-        <div
-          style={{
-            width: canvasSize,
-            height: canvasSize,
-            borderRadius: 16,
-            border: `2px solid ${colors.ink}`,
-            overflow: 'hidden',
-            background: colors.paper,
-            flexShrink: 0
-          }}
-        >
-          <Canvas
-            camera={{ position: [0, 0, 2.8], fov: 45 }}
-            style={{ background: colors.paper }}
-            gl={{ antialias: true, toneMapping: THREE.NoToneMapping }}
-            flat
-          >
-            <Suspense fallback={null}>
-              <GlobeContent
-                geoData={geoData}
-                selectedCountry={selectedCountry}
-                hoveredCountry={hoveredCountry}
-                onSelectCountry={handleSelectCountry}
-                onHoverCountry={setHoveredCountry}
-              />
-              <OrbitControls
-                enablePan={false}
-                enableZoom={true}
-                minDistance={1.8}
-                maxDistance={4}
-                rotateSpeed={0.5}
-                zoomSpeed={0.5}
-              />
-            </Suspense>
-          </Canvas>
+        <div style={{
+          width: globeSize,
+          height: globeSize,
+          borderRadius: 16,
+          border: `2px solid ${colors.ink}`,
+          overflow: 'hidden',
+          background: colors.paper,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          {globeElement}
         </div>
 
-        {/* Info Panel */}
         <div style={{
           width: 280,
           minHeight: 200,

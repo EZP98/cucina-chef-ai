@@ -35,20 +35,6 @@ export default function GustoGlobe3D({
       .catch(console.error);
   }, []);
 
-  // Auto-rotate
-  useEffect(() => {
-    if (globeRef.current) {
-      globeRef.current.controls().autoRotate = true;
-      globeRef.current.controls().autoRotateSpeed = 0.5;
-    }
-  }, [geoData]);
-
-  // Stop rotation when country selected
-  useEffect(() => {
-    if (globeRef.current) {
-      globeRef.current.controls().autoRotate = !selectedCountry;
-    }
-  }, [selectedCountry]);
 
   const handleSelectCountry = useCallback((polygon) => {
     if (polygon) {

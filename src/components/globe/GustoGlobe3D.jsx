@@ -35,6 +35,14 @@ export default function GustoGlobe3D({
       .catch(console.error);
   }, []);
 
+  // Disable zoom
+  useEffect(() => {
+    if (globeRef.current) {
+      const controls = globeRef.current.controls();
+      controls.enableZoom = false;
+    }
+  }, [geoData]);
+
 
   const handleSelectCountry = useCallback((polygon) => {
     if (polygon) {
@@ -65,18 +73,19 @@ export default function GustoGlobe3D({
 
   if (!isOpen) return null;
 
-  const globeSize = inline ? 'min(500px, 90vw)' : Math.min(window.innerWidth - 40, 500);
+  const globeSize = inline ? 'min(700px, 90vw)' : Math.min(window.innerWidth - 40, 700);
 
   const globeElement = (
     <Globe
       ref={globeRef}
-      width={typeof globeSize === 'string' ? 500 : globeSize}
-      height={typeof globeSize === 'string' ? 500 : globeSize}
+      width={typeof globeSize === 'string' ? 700 : globeSize}
+      height={typeof globeSize === 'string' ? 700 : globeSize}
       backgroundColor="rgba(0,0,0,0)"
       globeImageUrl={null}
       showGlobe={true}
       showAtmosphere={false}
       globeMaterial={globeMaterial}
+      enablePointerInteraction={true}
 
       // Polygon styling
       polygonsData={geoData.features}

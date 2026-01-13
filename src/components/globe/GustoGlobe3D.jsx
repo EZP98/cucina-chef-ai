@@ -135,22 +135,13 @@ export default function GustoGlobe3D({
         )}
 
         {selectedCountry && (
-          <div style={{
-            width: '100%',
-            maxWidth: 500,
-            background: 'white',
-            borderRadius: 16,
-            border: `2px solid ${colors.ink}`,
-            padding: 20
-          }}>
-            <CulinaryPanel
-              country={selectedCountry}
-              onClose={() => setSelectedCountry(null)}
-              onAskQuestion={(question, context) => {
-                if (onAskQuestion) onAskQuestion(question, context);
-              }}
-            />
-          </div>
+          <CulinaryPanel
+            country={selectedCountry}
+            onClose={() => setSelectedCountry(null)}
+            onAskQuestion={(question, context) => {
+              if (onAskQuestion) onAskQuestion(question, context);
+            }}
+          />
         )}
       </div>
     );

@@ -17,7 +17,6 @@ import {
   RecipeInChat,
   RecipeTips,
   MenuInChat,
-  ConversationListItem,
   NewChatButton,
   tokens
 } from './components/ui/ChatComponents';
@@ -933,21 +932,6 @@ export default function App() {
 
           {/* New Chat Button */}
           <NewChatButton onClick={handleNewConversation} />
-
-          {/* Conversation List */}
-          {conversations.length > 0 && (
-            <div style={{ marginTop: 8, marginBottom: 16 }}>
-              {conversations.slice(0, 8).map((conv) => (
-                <ConversationListItem
-                  key={conv.id}
-                  title={conv.title}
-                  isActive={conv.id === activeId && screen === 'chat'}
-                  onClick={() => selectConversation(conv.id)}
-                  onDelete={() => handleDeleteConversation(conv.id)}
-                />
-              ))}
-            </div>
-          )}
 
           {/* Divider */}
           <div style={{ height: 1, background: '#E8E4DE', margin: '8px 0' }} />

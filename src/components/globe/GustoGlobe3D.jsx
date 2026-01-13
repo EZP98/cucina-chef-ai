@@ -26,6 +26,14 @@ export default function GustoGlobe3D({
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [hoveredCountry, setHoveredCountry] = useState(null);
   const [geoData, setGeoData] = useState({ features: [] });
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 900);
+
+  // Detect mobile
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 900);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Load GeoJSON data
   useEffect(() => {
@@ -143,9 +151,18 @@ export default function GustoGlobe3D({
         {selectedCountry && (
           <div style={{
             position: 'absolute',
-            top: '50%',
-            left: 'calc(50% + 220px)',
-            transform: 'translateY(-50%)',
+            ...(isMobile ? {
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 100,
+              width: '90%',
+              maxWidth: 360
+            } : {
+              top: '50%',
+              left: 'calc(50% + 220px)',
+              transform: 'translateY(-50%)'
+            }),
             maxHeight: 'calc(100vh - 100px)',
             overflowY: 'auto'
           }}>

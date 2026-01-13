@@ -144,7 +144,7 @@ export default function GustoGlobe3D({
           <div style={{
             position: 'absolute',
             top: '50%',
-            left: 'calc(50% + 270px)',
+            left: 'calc(50% + 220px)',
             transform: 'translateY(-50%)',
             maxHeight: 'calc(100vh - 100px)',
             overflowY: 'auto'

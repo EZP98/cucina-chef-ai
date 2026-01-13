@@ -120,7 +120,7 @@ export default function GustoGlobe3D({
         width: '100%',
         padding: '20px 0',
         position: 'relative',
-        minHeight: isMobile ? 'auto' : undefined
+        minHeight: isMobile ? 'calc(100vh - 120px)' : undefined
       }}>
         <div style={{
           width: isMobile ? '100%' : globeSize,

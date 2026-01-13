@@ -114,22 +114,25 @@ export default function GustoGlobe3D({
     return (
       <div style={{
         display: 'flex',
-        alignItems: 'flex-start',
+        alignItems: 'center',
         justifyContent: 'center',
         gap: 24,
         width: '100%',
         padding: '20px 0',
-        position: 'relative'
+        position: 'relative',
+        minHeight: isMobile ? 'auto' : undefined
       }}>
         <div style={{
-          width: globeSize,
+          width: isMobile ? '100%' : globeSize,
+          maxWidth: globeSize,
           height: globeSize,
           background: colors.paper,
           borderRadius: 16,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          flexShrink: 0
+          flexShrink: 0,
+          margin: isMobile ? '0 auto' : undefined
         }}>
           {globeElement}
         </div>
